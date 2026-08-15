@@ -1,0 +1,24 @@
+* First heading
+** This is a subheading for the first heading
+ble ble ble bla bla 
+* Secodn heading                                                      :emacs:
+** This is the second heading in the second main heading
+etc etc 
+* This is no *Normal*
+this is code
+=printf("hello world");=
+~Vebratim wala chnowa~ 
+* In this there are lists
++ +  
+- -
+1.
+2) 
+* This header have a link to duckduckgo
+ *[ [site ] [ title ]*
+also this can be applied to a local file
+* TODO Bla bla bla
+* DONE Ble ble ble
+CLOSED: [2026-05-02 س 21:34]
+* Tags                                                                 :tags:
+ C-c C-c to put a tag to a header
+ C-c \ to search for a specific 

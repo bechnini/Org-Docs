@@ -1,0 +1,441 @@
+* Networking OverView
+ The big idea of networking is exchanging bytes of data beetween 2 computers or more on the internet or lan
+ We need
+ 1. A way to identify source and destination computers
+ 2. A way maintaining data integrity
+ 3. A way of routing data from one pc to another (out of billions)
+** Circuit Switched
+  Example : the old phone operator method as i like to call it
+  Problems
+  1. Dedicated circuit for each call
+  2. ty yser khayba w useless alekher khater kol appel lezmo circuit w tnajemch thandlehim el kol
+** Packet Switched
+Your data split up to packets ; get routed with thousands of other packets that arent yours ; once they arrive to the destination computer ; that computer reconstruct the data from those packets
+** Client/Server Architecture
+Server : program listen for incoming conncetions , acccept them , and recive a request and sends back a respone to the client
+PS: The conversations between the server and the client might be complex depending on what the server does
+Client / Server are network programs
+** The OS , Networking programming , Sockets
+The network is hardware , the OS controls all acces to hardware (Low level) , So to write software for the hardware it needs to be made through the OS
+This is done by using an API called sockets API.
+The unix socket one of many things it can do is give you a way to read and write data over the internet
+Other languages and operating systems have added the same Internet functionality over time, and many of them use different calls in their APIs. But as an homage to the original, many of these APIs are still called “sockets” APIs even if they don’t match the original.
+** Protocols
+Just like you can’t take a letter, wrap it up in aluminum foil with no address, and expect the post office to deliver it to your intended recipient. That’s breaking post office protocol.
+Both the sender and recipient have to be speaking the same protocol for correct communication to occur.
+Examples of protocols :
+TCP      : used to transmit reliably
+UDP      : used to transmit quickly and unreliably
+IP       : Routes the packets over the network
+HTTP     : Get web pages and make other web requests
+Ethernet : Used to send data over a LAN
+** Network Layers and Abstraction
+Here’s a quick overview of what happens when data goes out on the network. We’ll cover this in much more detail in the coming modules.
+
+1. A user program says, “I want to send the bytes ‘GET / HTTP/1.1’ to that web server over there.” (Servers are identified by IP address and a port on the Internet–more on that later.)
+
+2. The OS takes the data and wraps it up in a header (that is, prepends some data) that provides error detection (and maybe ordering) information. The exact structure of this header would be defined by a protocol such as TCP or UDP.
+
+3. The OS takes all of that, and wraps it up in another header that helps with routing. This header would be defined by the IP protocol.
+
+4. The OS hands all that data to the network interface card (the NIC–the piece of hardware that’s responsible for networking).
+
+5. The NIC wraps all that data up into another header that’s defined by a protocol such as Ethernet that helps with delivery on the LAN.
+
+6. The NIC sends the entire, multiply-wrapped data out over the wire, or over the air (with WiFi).
+All these layers that do all this wrapping called protocol stack :
+ This works good cuz every layer is responsible for a different part of the process
+And since the layers don’t care what data is encapsulated below them, you can swap out protocols at various layers and still have the rest of them work. So if you’re writing a program at the top layer (where we tend to write them most commonly), you don’t care what’s happening at the layers below that. It’s Somebody Else’s Problem.
+For example, you might be getting a web page with HTTP/TCP/IP/Ethernet, or you might be transmitting a file to another computer with TFTP/UDP/IP/Ethernet. IP and Ethernet work fine in both cases, because they are indifferent about the data they are sending.
+** Wired vs Wireless
+BTW both use ethernet protocol for low level comm
+** DONE REFLECT
+1. Is the Internet circuit-switched or packet-switched?
+     Packet switched
+2. What is the relationship between a client program and a server program?
+     The server wait for a client to connect to it to start communicating
+3. What role does the OS play when you’re writing networked programs?
+     Talking To hardware
+4. What is a protocol?
+     A protocol is a set of parameters that both the client and the server agrees on to communicate
+5. What are the reasons for having a protocol stack and data encapsulation?
+     Each protocol is responsible for different part of the process
+6. What are the practical differences between a WiFi network and a wired network?
+* Introducing The sockets API
+** Client connection process
+1. Ask the OS for a scoket : the os will return an integer (file descriptor) that will be used to refer to this network connection 
+2. A dns lookup : To convert human-readable names (google.com) to an ip addr
+   Hint : just calling *socket.connect()* with a hostname will do the dns lookup for you ; *socket.getaddrinfo()* performs a dns lookup 
+3. Connect the socket to that IP with a specific port
+4. Send and recive data
+5. Close the connection
+** Server listening process
+1. Just like the client ask the os for a socket
+2. Bind the socket with a port : assign a port for the socket
+3. Listen to incoming connections
+4. Accept incoming connections
+5. Send and recive data
+6. Go back and accept other connections ; Servers can handle multiple connections at once
+** DONE REFLECT
+1. What role does *bind()* play on the server side
+   the function *bind()* binds a port to the socket
+2. Would a client ever call bind()?
+   Not usally , a client would call bind if the server expecting the client to connect through a specific port or something like that didnt understand it that much but it is rare for the clinet to use *bind()*
+3. Speculate on why accept() returns a new socket as opposed to just reusing the one we called listen() with.
+   The *listen()* socket dedicated for watching new connections , *accept()* creates another socket to handle the clinet
+4. What would happen if the server didn’t loop to another accept() call? What would happen when a second client tried to connect?
+   The client wouldnt be able to connect to the server
+5. If one computer is using TCP port 3490, can another computer use port 3490?
+   Yes
+6. Speculate about why ports exist. What functionality do they make possible that plain IP addresses do not?
+   Ip addreses work like they are id's ; ports like countries , each country have its own use thats how i would explain it
+* The Layerd Network Model
+IP Address – historically 4-byte number uniquely identifying your computer on the Internet. Written in dots-and-numbers notation, like so: 198.51.100.99.
+
+These are IP version 4 (“IPv4”) addresses. Typically “v4” is implied in the absence of any other version identifier.
+
+Port – Programs talk through ports, which are numbered 0-65535 and are associated with the TCP or UDP protocols.
+
+Since multiple programs can be running on the same IP address, the port provides a way to uniquely identify those programs on the network.
+
+For example, it’s very common for a web server to listen for incoming connections on port 80.
+
+Publishing the port number is really important for server programs since client programs need to know where to connect to them.
+
+Clients usually let the OS choose an unused port for them to use since no one tries to connect to clients.
+
+In a URL, the port number is after a colon. Here we try to connect to example.com on port 3490: http://example.com:3490/foo.html
+
+Ports under 1024 need root/administrator privileges to bind to (but not to connect to).
+
+TCP – Transmission Control Protocol, responsible for reliable, in-order data transmission. From a higher-up perspective, makes a packet-switched network feel more like a circuit-switched network.
+
+TCP uses port numbers to identify senders and receivers of data.
+
+This protocol was invented in 1974 and is still in extremely heavy use today.
+
+In the sockets API, TCP sockets are called stream sockets.
+
+UDP – sibling of TCP, except lighter weight. Doesn’t guarantee data will arrive, or that it will be in order, or that it won’t be duplicated. If it arrives, it will be error-free, but that’s all you get.
+
+In the sockets API, UDP sockets are called datagram sockets.
+
+IPv6 Address – Four bytes isn’t enough to hold a unique address, so IP version 6 expands the address size considerably to 16 bytes. IPv6 addresses look like this: ::1 or 2001:db8::8a2e:370:7334, or even bigger.
+
+NAT – Network Address Translation. A way to allow organizations to have private subnets with non-globally-unique addresses that get translated to globally-unique addresses as they pass through the router.
+
+Private subnets commonly start with addresses 192.168.x.x or 10.x.x.x.
+
+Router – A specialized computer that forwards packets through the packet switching network. It inspects destination IP addresses to determine which route will get the packet closer to its goal.
+
+IP – Internet Protocol. This is responsible for identifying computers by IP address and using those addresses to route data to recipients through a variety of routers.
+
+LAN – Local Area Network. A network where all the computers are effectively directly connected, not via a router.
+
+Interface – physical networking hardware on a computer. A computer might have a number of interfaces. Your computer likely has two: a wired Ethernet interface and a wireless Ethernet interface.
+
+A router might have a large number of interfaces to be able to route packets to a large number of destinations. Your home router probably only has two interfaces: one facing inward to your LAN and the other facing outward to the rest of the Internet.
+
+Each interface typically has one IP address and one MAC address.
+
+The OS names the interfaces on your local machine. They might be something like wlan0 or eth2 or something else. It depends on the hardware and the OS.
+
+Header – Some data that is prepended to some other data by a particular protocol. The header contains information appropriate for that protocol. A TCP header would include some error detection and correction information and a source and destination port number. IP would include the source and destination IP addresses. Ethernet would include the source and destination MAC addresses. And an HTTP response would include things like the length of the data, the date modified, and whether or not the request was successful.
+
+Putting a header in front of the data is analogous to putting your letter in an envelope in the snail-mail analogy. Or putting that envelope in another envelope.
+
+As data moves through the network, additional headers are added and removed. Typically only the top-most (front-most?) header is removed or added in normal operation, like a stack. (But some software and hardware peeks deeper.)
+
+Network Adapter – Another name for “network card”, the hardware on your computer that does network stuff.
+
+MAC Address – Ethernet interfaces have MAC addresses, which take the form aa:bb:cc:dd:ee:ff, where the fields are random-ish one-byte hex numbers. MAC addresses are 6 bytes long, and must be unique on the LAN. When a network adapter is manufactured, it is given a unique MAC address that it keeps for life, typically
+** The layerd network model
+ when data is sent throught the internet it gets encapsulated in different layers of protocols
+** Example of layering of protocols on data
+ 1. Web browser build an http req , it does not care about anything else it just cares about the http req
+ 2. The os takes it and says i need to send this over an oriented socket , lets use tcp and wraps the http header in a tcp header
+ 3. After that the os says ow i need to send this to x ip and it uses the IP protocol to send it and wrap the tcp-http in a IP layer
+ 4. After that the os encapsulate the previos layers in an ethernet layer
+ 5. and finally data goes through wifi or cables
+ + The computer that will recive this will do the reverse to unencapsulate the data
+** The internet layer module
+ | Layer       | Responsibility                                  | Example Protocols                             |
+ |-------------+-------------------------------------------------+-----------------------------------------------|
+ | Application | Structured application data                     | HTTP, FTP, TFTP, Telnet, SSH, SMTP, POP, IMAP |
+ | Transport   | Data Integrity, packet splitting and reassembly | TCP, UDP                                      |
+ | Internet    | Routing                                         | IP, IPv6, ICMP                                |
+ | Link        | Physical, signals on wires                      | Ethernet, PPP, token ring                     |
+ |             |                                                 |                                               
+** The Osi Model
+The OSI Model is more like the internet module but its more detailed
+A layer in the internet module cover more than a layer in the OSI model
+
+| ISO OSI Layer | Internet Layer |
+|---------------+----------------|
+| Application   | Application    |
+| Presentation  | Application    |
+| Session       | Application    |
+| Transport     | Transport      |
+| Network       | Network        |
+| Data link     | Link           |
+| Physical      | Link           |                         
+
+This are the layers and their responsibilty and protocols
+
+| ISO OSI Layer | Responsibility                                  | Example Protocols                        |
+|---------------+-------------------------------------------------+------------------------------------------|
+| Application   | Structured application data                     | HTTP, FTP, TFTP, Telnet, SMTP, POP, IMAP |
+| Presentation  | Encoding translation, encryption, compression   | MIME, SSL/TLS, XDR                       |
+| Session       | Suspending, terminating, restarting sessions    | Sockets, TCP                             |
+| Transport     | Data integrity, packet splitting and reassembly | TCP, UDP                                 |
+| Network       | Routing                                         | IP, IPv6, ICMP                           |
+| Data link     | Encapsulation into frames                       | Ethernet, PPP, SLIP                      |
+| Physical      | Physical, signals on wires                      | Ethernet physical layer, DSL, ISDN       |
+
+We are going to stick to the internet layer module since it cover 99% of what we will likely need in our netwroking programs
+** DONE Reflect
+1. When a router sees an IP address, how does it know where to forward it?
+   By using the destination ip in the IP protocol header
+2. If an IPv4 address is 4 bytes, roughly how many different computers can that represent in total, assuming each computer has a unique IP address?
+   I didnt calculate , looked it up online , roughly 4 billions
+3. Same question, except for IPv6 and its 16-byte addresses?
+   16 Bytes = 128 bit
+   2^128 = 340 billion billion billion billion ...
+4. Bonus question for stats nerds: The odds of winning the super lotto jackpot are approximately 300 million to 1. What are the odds of randomly picking my pre-selected 16-byte (128-bit) number?
+   Not a Math nerd sadly
+5. Speculate on why the IP header wraps up the TCP header in the layered model, and not the other way around.
+   Because when de-encapsulated the router firsly needs an ip to send the data to , if we put the tcp wraps up the ip header the router wouldnt know where to send those data and will recive himself and he will crash because it cannot handle tcp it can only handle ip
+6. If UDP is unreliable and TCP is reliable, speculate on why one might ever use UDP.
+   When we dont need perfectness , vedio streaming : its no problem to loose a frame or two ;
+* Project : HTTP Client And Server
+Were going to make a socket program that can download files from a web server
+Were using HTTP
+** Restriction
+We will not use any of the follwing functions to understand this on a low level :
+1. *socket.create_connection()*
+2. *socket.create_server()*
+** Python Charachter encoding
+The charachter encoding define wich byte crrespond for wich charachter
+We will use ASCII
+*s="hello world"*
+*b= s.encode("ASCII")*
+*s= b.decode("ASCII")*
+This is an example program of charachter encoding , there are hunderds of enccodings btw
+** HTTP Summary
+HTTP works on the concept of requests and resposes, client req a web page , server respond by sending it back
+This a simple HTTP req :
+*GET / HTTP/1.1*
+*Host: example.com*
+*Connection : close*
+This request is saying “Get the root web page from the server example.com and I’m going to close the connection as soon as I get your response.”
+If you were requesting a specific file it would look like this
+*GET /path/t/file.ext HTT/1.1*
+IF there was a payload there will be a content length header we will not worry about it for the moment
+*HTTP/1.1 200 OK*
+*Content-Type:text/plain*
+*Content-length : 6*
+*Connection : close*
+*space*
+*Hello!*
+The response says everything went through here is your 6 byte reponse
+** The Client
+#+BEGIN_SRC python
+import socket
+s = socket.socket()
+host = 'localhost'
+path = '/'
+payload = input("send somthing")
+le = len(payload)
+s.connect((host,28333))
+req= (
+    f"GET {path} HTTP/1.1\r\n"
+    f"Host: {host}\r\n"
+    f"Content-Type: text/plain\r\n"
+    f"Content-Length: {le}\r\n"
+   "\r\n"
+   f" {payload} \r\n"
+   )
+s.sendall(req.encode())
+req = b""
+while(True):
+    data = s.recv(4096)
+    req = req + data
+    if b"\r\n\r\n" in req:
+        break
+print(req.decode())
+
+
+#+END_SRC
+** The Server
+#+BEGIN_SRC python
+import socket
+s = socket.socket()
+s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+s.bind(('' , 28333))
+s.listen()
+while(True):
+        n= s.accept()
+        ns=n[0]
+        add = n[1]
+        req = b""
+        while(True):
+            data = ns.recv(4096)
+            req = req + data
+            if b"\r\n\r\n" in req:
+                break
+        response = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/plain\r\n"
+            "Content-Length: 6\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "Hello!"
+        )
+        ns.sendall(response.encode())
+        decoded = req.decode()
+        print(decoded)
+        print("Got conenction from", add)
+        ns.close()
+        split = decoded.split()
+        print("Method used for the request is",split[0])
+        #+END_SRC
+** Extensions
+1. Modify the server to print out the IP address and port of the client that just connected to it. Hint: look at the value returned by accept() in Python.
+2. Modify the client to be able to send payloads. You’ll need to be able to set the Content-Type and Content-Length based on the payload.
+3. Modify the server to extract and print the “request method” from the request. This is most often GET, but it could also be POST or DELETE or many others.
+4. Modify the server to extract and print a payload sent by the client.
+* The internet Protocol (IP)
+The ip protocol is responsible for routing data through the internet working like a post office
+** Two Commun Versions
+IPv4 and IPv6
+Difference is IPv4 uses 4bytes per addresess , IPv6 uses 16 bytes
+** Subnets
+The initial bits of an ip addres identify indivudual network
+The trailing bits of an ip addres identify the host
+Those individual networks are called subnets
+** Additional IP-Layer Protocols
+There are some related protocols that also work in concert with IP and at the same layer in the network stack.
+** Private Networks
+There are private networks hidden behind routers that do not have globally unique IP addresses on their machines. (Though they do have unique addresses within the LAN itself.)
+** Static Vs Dynamic IP Addres
+If you have clients hitting your website, or you have a server that you want to SSH into repeatedly, you’ll need a static IP. This means you get a globally-unique IP address assigned to you and it never changes.
+
+This is like having a house number that never changes. If you need people to be able to find your house repeatedly, this needs to be the case.
+
+But since there are a limited number of IPv4 addresses, static IPs cost more money. Often an ISP will have a block of IPs on a subnet that they dynamically allocate on-demand.
+
+This means when you reboot your broadband modem, it might end up with a different public-facing IP address when it comes back to life. (Unless you’ve paid for a static IP.)
+
+Indeed, when you connect your laptop to WiFi, you also typically get a dynamic IP address. Your computer connects to the LAN and broadcasts a packet saying, “Hey, I’m here! Can anyone tell me my IP address? Pretty please with sugar on top?”
+
+And this is OK because people aren’t generally trying to connect to servers on your laptop. It’s usually the laptop that’s connecting to other servers.
+
+How does it work? On one of the servers on the LAN is a program that is listening for such requests, which conform to DHCP (the Dynamic Host Configuration Protocol). The DHCP server keeps track of which IP addresses on the subnet are already allocated for use, and which are free. It allocates a free one and sends back a DHCP response that has your laptop’s new IP address, as well as other data about the LAN your computer needs (like subnet mask, etc.).
+
+If you have WiFi at home, you very likely already have a DHCP server. Most routers come from your ISP with DHCP already set up, which is how your laptop gets its IP address on your LAN.
+
+(I copied this because i already know whats the difference)
+** DONE Reflect
+1. Applications commonly also implement their own encryption (e.g. ssh or web browsers with HTTPS). Speculate on the advantages or disadvantages for having IPSec at the Internet layer instead of doing encryption at the Application layer.
+   If the IPSec used at the internet layer the os will handle the enccryption but if used at the application layer the developper will have to configure it correctly and any mistake will cost the data to be revealed or unreadable
+2. What is the benefit to having a static IP? How does it relate to DNS?
+   So you can host a website and acces it easily since dns cant know your ip if its dynamic
+* The IPv4
+** Ip address
+IPv4 addr is noted in dots and numbers format
+*192.92.100.112*
+Its always 4 numbers , each nymber represeants a byte so it can go from 0 to 255 00000000 to 11111111
+** Subnets
+Since subnets are a fucking hard thing i will try to make it easy , the intire ip addr is split , first part of it indicates the subnets number , the rest it the indicates the host on that subnet
+Lets sa you ask your isp for 180 static ip addresess
+So you will have 180 + 2 ( The broadcast ip and the network address so we need 8 bits to represent the numbers 0 to 255 wich is the smallest number of bits who includes 182
+*Your subnet is 198.51.100.0 and there are 24 network bits and 8 host bits.*
+*198.51.100.0/24*
+This is how its represented
+
+24 network bits
+----------
+198.51.100.0
+           -
+         8 host bits
+Now in binary
+
+       24 network bits         | 8 host bits
+-------------------------------+---------
+11000110 . 00110011 . 01100100 . 00000000
+     198         51        100          0
+     
+We could have a Subnet like this
+*198.51.100.976/28*
+So there is less host bits and more network bits
+
+# I got this question that why dont all the subnets use the 24 network bits and the answer was so we dont waste IPv4 addreses because it a limited resource , think of it as an office with 10 computers and you give them 256 hosts there re 244 ip's wasted thats why we give him a small subnet
+** Subnet Mask
+packet arrives for 198.51.100.67
+        ↓
+router ANDs it with the mask
+        ↓
+gets 198.51.100.0  (the subnet)
+        ↓
+looks it up in its routing table
+        ↓
+sends the packet to the right interface
+
+Subnets mask used so the router know wich subnet to send to
+** DONE Reflect
+1. *192.168.262.12* is not a valid IP address. Why?
+   Because 262>255
+2. Reflect on some of the advantages of the subnet concept as a way of dividing the global address space.
+   1. If there was no subnets , the router would have to broadcast to all 4 bilion devices on the earth and that would be chaotic
+   2. If there was no subnets , a small office that have 10 computers will have a network with 256 hosts that can connect and they will not use it and it is a waste of ip addresess
+3. What is your computer’s IPv4 address and subnet mask right now? (You might have to search how to find this for your particular OS.)
+   Use *ifconfig* on linux and *ipconfig* on windows and you will find it
+4. If a IP address is listed as 10.37.129.212/17, how many bits are used to represent the hosts?
+   32-17=15 bits represent the hosts
+* The IPv6
+Main difference is IPv6 uses 128 bits instead of 32 
+** Representation
+* Project : A better Web Server
+** Resitrictions
+We will not use any of these functions to understand the socket api on a low level
+1. *socket.create_connection()*
+2. *socket.create_server()*
+3. Anything in the *urllib* modules
+** DONE  
+* Endiannes And Integers
+We’ve done some work transmitting text over the network. But now we want to do something else: we want to transfer binary integer data.
+
+Sure we could just convert the numbers to strings, but this is more wasteful than it needs to be. Binary representation is more compact and saves bandwidth.
+
+But the network can only send and receive bytes! How can we convert arbitrary numbers to single bytes?
+
+That’s what this chapter is all about.
+
+We want to:
+
+Convert integers to byte sequences
+Convert byte sequences back into integers
+And in this chapter we’ll look at:
+
+How numbers are represented by sequences of bytes
+What order those bytes go in
+How to convert a number to a sequence of bytes in Python
+How to convert a sequence of bytes to a number in Python
+Key points to look out for:
+
+Integers can be represented by sequences of bytes.
+We’ll convert integers to sequences of bytes before we transmit them over the network.
+We’ll convert sequences of bytes back into integers when we receive them over the network.
+Big-Endian and Little-Endian are two different ways of ordering those sequences of bytes.
+Python offers built-in functionality for converting integers to sequences of bytes and back again.
+** Integer representation
+in this section we will deep into how an interger can be represented by a sequence of individual bytes
+*** Decymal Byte Representation
+Integers from 0 to 255 are represented by 1 byte , but what about number higher than 255 , well we can use more than one byte for a number , if we use 2 bytes wich is 16 bits we can cover numbers from 0 to 65535 so yeah .
+this section talking only about non-negative numbers only , float numbers use another method for encoding , negative numbers use a similar one to what we are using rn
+*** Binary Byte representation
+Binary, hexadecimal, and decimal are just all different “languages” for writing down values.
+...
+*** Hexadecimal Byte Representation
+They are just like the binary , its the same language
+
