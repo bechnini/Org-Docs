@@ -159,7 +159,7 @@ MAC Address – Ethernet interfaces have MAC addresses, which take the form aa:b
  5. and finally data goes through wifi or cables
  + The computer that will recive this will do the reverse to unencapsulate the data
 ** The internet layer module
- | Layer       | Responsibility                                  | Example Protocols                             |
+y | Layer       | Responsibility                                  | Example Protocols                             |
  |-------------+-------------------------------------------------+-----------------------------------------------|
  | Application | Structured application data                     | HTTP, FTP, TFTP, Telnet, SSH, SMTP, POP, IMAP |
  | Transport   | Data Integrity, packet splitting and reassembly | TCP, UDP                                      |
@@ -436,6 +436,1094 @@ this section talking only about non-negative numbers only , float numbers use an
 *** Binary Byte representation
 Binary, hexadecimal, and decimal are just all different “languages” for writing down values.
 ...
-*** Hexadecimal Byte Representation
-They are just like the binary , its the same language
+*** Python And Endianness
+ Convert to bytes : .to_bytes()
+ Confert from bytes : .from_bytes()
+** TODO Reflect
+1. Using only the .to_bytes() and .from_bytes() methods, how can you swap the byte order in a 2-byte number? (That is reverse the bytes.) How can you do that without using any loops or other methods? (Hint: "big" and "little"!)
+ > By doing this : from/to_bytes("little")
+   
+2. Describe in your own words the difference between Big-Endian and Little-Endian.
+ > Big indian is the normal way of reading bytes , from left to right . Little endian is the reverse , like arabic and english
 
+3. What is Network Byte Order? 
+ > A netwrok byte order is how the reciver and sender agree the oreder of reading the network bytes
+4. Why not just send an entire number at once instead of breaking it into bytes?
+ > Cuz computers talk in bytes 
+* Parsing Packets
+#+BEGIN_SRC python
+global buffer = b''    # Empty bytestring
+
+function get_packet():
+    while True:
+        if buffer starts with a complete packet
+            extract the packet data
+            strip the packet data off the front of the buffer
+            return the packet data
+
+        receive more data
+
+        if amount of data received is zero bytes
+            return connection closed indicator
+
+        append received data onto the buffer
+#+END_SRC
+This is the general idea of parsing packets1
+** DONE REFLECT
+1. Describe the advantages from a programming perspective to abstracting packets out of a stream of data.
+>  Cleaner code , and so you can deal with packets that have meaning not just some random packets  
+* PROJECT : Atomic Time
+[[file:./nw.org/atomictime.py][atomictime.py]]
+* PROJECT : The Word Server
+[[./nw.org/thewordserver.py][Thewordserver.py
+]]
+* Transmiton control protocol (TCP)
+** Goals Of tcp
+- Provide reliable comms
+- Simulation of circuit like connection on a packet-switched network
+- Provide flow control
+- Provide congestion control
+- Support out-of-band da
+** Location in the Network Stack
+ |-------------+-------------------------------------------------+-----------------------------------------------|
+ | Application | Structured application data                     | HTTP, FTP, TFTP, Telnet, SSH, SMTP, POP, IMAP |
+ | Transport   | Data Integrity, packet splitting and reassembly | TCP, UDP                                      |
+ | Internet    | Routing                                         | IP, IPv6, ICMP                                |
+ | Link        | Physical, signals on wires                      | Ethernet, PPP, token ring                     |
+
+ Located in the transport layer , wich is responsible for data integrity , packet splitting and reassembly as shown . The layer above it benefits from its features 
+** Tcp Ports
+By analogy, the IP address is like a street address, and the port number is like an apartment number at that street address.
+** Tcp OverView
+Tcp Do 3 main things during a connection
+1. Make the connection
+2. Transmit Data
+3. Close that connection
+*** Making the connection
+1. The client sends a SYN (synchronize) packet to the server.
+2. The server replies with a SYN-ACK (synchronize acknowledge) packet back to the client.
+3. The client replies with an ACK (acknowledge) packet back to the server.
+And if there is no reply in a resonable time in any of the steps the packet will be resent.
+*** Transmitting Data
+Tcp takes data and split it into chunks . each chunk get a tcp header , and its sent to the internet layer for routing .
+Tcp header + Tcp chunk = Tcp segment
+When tcp sends a segment it expects the client to respond with an acknowledgment *Ack* , if it dont get it it will assume that something happend and it needs to resend that segment.
+*** Closing The Connection
+When a side wants to close the connection is send a *Fin* packet , the remote side will send an *Ack* Packet and a *Fin* packet of his own . 
+in some Oses if a host closes a connection with unread data it send back a *RST* packet (reset) to indicate that condition
+** Data Integrity
+There are multiple problems that could happen . data can arrive out of order , data can arrive duplicated , it can be half the data only , or never show up at all . this is how tcp handles it
+*** Packet Ordering
+the sender place a sorting numbers on each segment (Here is segmen 2003 , here is segment 2004 ...)
+- if two segments arrive out of order tcp could sort them by sequence number
+- If a segment is missing , tcp of the sender can ask for a retransmition , does it by repeatedly Acking the previos segment , The sender then will retransmit the next one
+- if the sender doesnt get an *ACK* it will retransmit the segment on its own
+PS: Sequence numbers are initialized to a random value during the 3-way handshake
+*** Error Detection
+The sender calaculates a checksum before sending the tcp segment , the reciver calculate its own checksum .
+if they math then they will continue and the data is error free , if not the sender will retransmit the data and that segment is discarded
+*** Flow Control
+You cant put 1000 Mb/s to a device that can only handle 100 Mb/s . to fix that the reciver specify this in the tcp header under *window* wich is the number of bytes that the sender could send before sending the
+next tcp segments 
+*** Congestion Control
+Flow control operate between 2 computers . but there is a greater problem , if a router gets overwhelmed by all the packets it gets from all the reciver it will start dropping packets and the sender will have to retransmit
+in order to fix the problem that hit NFSNET , two big algorithms were added : Slow Stat And Congestion Avoidance
+/NOTE : This is a simplified version explanation/
+**** Slow Start
+basically the sender assumes that there is a high congestion level so.
+it gives it self an initial congestion window wich is how much bytes unACKed bytes can be sent.
+when the acks come back it the size of the congestion window increases by the number of ACKed bytes.
+after one segment gets ACKed , it sends two and so on untill one of the ACKs get lost then it start slowing down and cut the congestion window by 2 . then tcp switched to congestion avoidance algorithm
+**** Congestion Avoidance Algorithm
+its more like slow start , but slower. each time a congestion window gets transmitted , it pushes a little harder by adding another segments to it , if thats work fine it allows itself one more ...
+eventually it pushes so far that it have to retransmit some segments at that point it sets a small congestion window and go back to slow start
+** DONE REFLECT
+1. Name a few protocols that rely on TCP for data integrity.
+   > HTTP / FTP / SMTP / SSH / TELNET
+2. Why is there a three-way handshake to set up a connection? Why not just start transmitting?
+   > To make sure that the client is ready to start reciving packets.
+3. How does a checksum protect against data corruption?
+   > Tcp calculate the checksum of the sender and the reciver and both have to match , if not the packet is corrupt
+4. What’s the main difference in the goals of Flow Control and Congestion Control?
+   > Flow is between 2 computers , Congestion is about the whole network
+5. Reflect on the reasons for switching between Slow Start and Congestion Avoidance. What advantages does each have in different phases of congestion detection?
+   >
+6. What is the purpose of Flow Control?
+   > To agree on a certain speed that the sender can send and the reciver can recive
+* User Datgram Protocol (UDP)
+** Goals Of Udp
+the following are not the goals of the udp
+- provide data in order
+- provide data without loss
+- provide data without duplicates
+if any of those are needed , you should use tcp.
+But what it does give you is really low overhead and quick response times. It doesn’t have any of the packet reassembly or flow control or ACK packets or any of the stuff TCP does. As a consequence, the header is much smaller.
+** Location In The Network Stack
+ | Layer       | Responsibility                                  | Example Protocols                             | 
+ | Application | Structured application data                     | HTTP, FTP, TFTP, Telnet, SSH, SMTP, POP, IMAP |
+ | Transport   | Data Integrity, packet splitting and reassembly | TCP, UDP                                      |
+ | Internet    | Routing                                         | IP, IPv6, ICMP                                |
+ | Link        | Physical, signals on wires                      | Ethernet, PPP, token ring                     |
+
+ As usual the its in the transport layer as udp, the application layer get its benefits
+** UDP Overview
+The UDP is connectionless :
+        you send a UDP datagram to an ip address and a port , ip routes it there and the reciving computer sends it to the programs thats bound to that port , when packets arrive the reciver can know wich ip it came from so he can send a response
+** Data Integrity
+A lot can go wrong , data can be duplicated , data can arrive corrupted , sometimes it dont even gets to its destination and guess what UDP doesnt give a fuck he barely have any mechanisms to deal with that tho he does have error detection
+*** Error Detection
+Before the sender send the udp datagram it calculate its checksum and include it in the udp header
+Udp Header is like this =
+     | Source / Port | Destination / port |
+     |---------------+--------------------|
+     |    Length     |     Checksum       |
+
+Then the reciver calculate its checksum , if it matches it keeps the packet , if not it discard it
+** Maximum Payload Without Fragmentation
+So the lower layers can decide to split udp packet to smaller packets , Maybe there is a part of the udp packet have to pass through that can only handlin data of a certain size so its gets split
+The maximum size packet that can be sent on any particular wire is called its MTU (maximum transmission unit). The smallest possible MTU on the Internet (IPv4) is 576 bytes. The biggest IP header is 60 bytes. And the UDP header is 8 bytes. So that leaves 576-60-8 = 508 bytes of payload that you can guarantee won’t be fragmented[^If you’re sending through a VPN, it might be less than this, but we’ll ignore that for sake of simplicity.]. Since the IP header is sometimes smaller than 60 bytes, lots of source say 512 bytes is the limit.
+** Use Cases
+Udp drops packet , why use it then . It is fast so thats a draw
+Some use cases of udp
+1. If you dont care to loose a few packets , mostly like video streaming , if a packet or two gets discarded the screen will glitch for a very short time and the next frame will come
+2. Multiplayer games uses udp for frame-by-frame updates
+3. If you cant afford to have packet loss , you can add another protocol on top of udp like TFTP , wich will put a sequence of numbers on each packet , so they arrive in order
+4. Etc , you could search the web buddy :)
+** UDP (Datagram) Sockets
+You no longer call listen(), connect(), accept(), send(), or recv() because there’s no “connection”.
+You call sendto() to send UDP data.
+You call recvfrom() to receive UDP data.
+** DONE REFLECT
+1. What does TCP provide that UDP does not in terms of delivery guarantees?
+   > Reliablity , Packets coming in order , Data not corrupted
+2. Why do people recommend keeping UDP packets small?
+   > So the ip layer dont split it
+3. Why is the UDP header so much smaller than the TCP header?
+   > Because it does not contain so much informations in its header like tcp
+4. sendto() requires you specify a destination IP and port. Why does the TCP-oriented send() function not require those arguments?
+   > Because you already made a connection before sending anything
+5. Why would people use UDP over TCP if it’s relatively unreliable?
+   > If speed is needed more than reliablity
+* PROJECT: Validating a tcp packet
+[[file:./nw.org/valtcp/valtcp.py][Valtcp.py]]
+* APPENDIX : BitWise Operations
+** Coding Differet Bases in python
+What value is 110101
+Your brain might think its decimal , but i didnt specify a number base  with that number so you dont know if its decimal , binary , hex
+Base | Base Name | Prefix
+-------------------------
+2    | Binary    | 0b
+8    | Octal     | 0o
+10   | Decimal   | None
+16   | Hex       | 0x
+** Printing And Converting
+Basically there is no such thing called as a value stored in hex or stored in decimal in a variable , the variable just holds a numeric value and we shouldnt consider it to have a base
+It only have a base when we write it in our code to print it out *print(hex(1919))* / *print(bin(1919))* / *print(f"1919 is {1919:x} in hex and {1919:b} in binary")* / *print(f"1919 is {3490:08x} in hex") == 00000da2*
+** Bitwise-AND
+Bitwise-AND mashes two numbers together with an AND operation. The result of an AND operation is 1 if both of the two input bits are 1. Otherwise it’s 0.
+  0100011111000101010      146986
+& 1001111001001111000    & 324216
+---------------------    --------
+  0000011001000101000       12840
+** Bitwise-OR
+Bitwise-OR mashes two numbers together with an OR operation. The result of an OR operation is 1 if either or both of the two input bits are 1. Otherwise it’s 0.
+  0100011111000101010      146986
+|
+  1001111001001111000      324216
+---------------------    --------
+  1101111111001111010      458362
+** Bitwise-Not
+Let’s do an example and NOT a single bit number. Bitwise-NOT uses the tilde operator (~) in Python and many other languages.
+~ 0   ~ 1
+---   ---
+  1     0
+
+Python note: the bitwise-NOT of a number will frequently be negative because of Python’s arbitrary-precision arithmetic. If you need it to be positive, bitwise-AND the result with the number of 1 bits you need to represent the final value. For instance, to get a byte with
+37 inverted, you can do any of these:
+(~37) & 255
+(~37) & 0xff
+(~37) & 0b11111111
+** Bitwise Shift
+This is an interesting one. Using this, you can move a number back and forth by a certain number of bits.
+000111000111  left shifted by 2 is:
+011100011100
+000111000111  right shifted by 2 is:
+000001110001  
+New bits on the left or right are set to zero, and bits that fall off the ends vanish forever.
+>> Is for Shifting right
+<< Is for Shifting left
+Thing You Want To Move >> / << By how many bits you want to shift it
+** Setting a Given Number of 1 bits
+[[/home/barnoun/Projects/pyfiles/subnetmask-calc.py][Subnet Mask Calculator]]
+
+** DONE REFLECT
+1. What is 2342 & 2332?
+   > 2310
+2. What is 0b110101 | 112?
+   > 117
+3. What is ~0b101010010101 in binary? (Python will show the result as a negative number, but you can turn it back positive by ANDing it with 0b111111111111. And don’t forget that Python leaves off leading zeroes when it prints!)
+   > 0b10101101010
+4. What is 16 << 1?
+5. What is 64 << 1?
+   > 128
+6. What is 4200 << 1? See the pattern?
+   > 8400
+7. what is 16 >> 2?
+   > 4
+8. What is 0b11100111 << 3?
+   > 0b11100111000
+9. What is (1 << 8) - 1?
+   > 255
+10 What is 0x01020304 & ((1 << 16) - 1)?   
+   > 772
+* IP Subnets And Subent Masks
+[Everything in this chapter will use ipv4 , not ipv6 . The concepts are basically the same , its easier to learn with ipv4]
+** Address Represenation
+As we said earlier in some chapter , hex , decimal , binary are just representation , more like languages , they have the same value , just in another language
+** Converting From Dots-And-Numbers
+Our goal is to convert a dots and numbers ip to its corresponding value.
+Lets say we have this ip addr "198.51.100.10"
+When we use .split() in python it becomes like this ["198", "51", "100", "10"]
+To add them up and do some math we have to make these into integers , we could do that by using the int() function in a loop and we will have this [198, 51, 100, 10]
+To make things easier we are going to write them in hex [0xc6, 0x33, 0x64, 0x0a]
+To build our number we are going to rely on bitwise operations : OR / SHIFT
+#+BEGIN_SRC python
+(0xc6 << 24) | (0x33 << 16) | (0x64 << 8) | 0x0a)
+#+END_SRC 
+Running that in python gives us the decimal number 3325256714 , Converted to hex 0xc633640a
+With this method you can convert any set of 4 bytes to a packed number
+** Converting To Dots-And-Numbers
+So basically what we did is reverse the Shifting we did earlier
+
+0xc633640a >> 24 == 0x000000c6
+0xc633640a >> 16 == 0x0000c633
+0xc633640a >> 8  == 0x00c63364
+0xc633640a >> 0  == 0xc633640a
+
+If you notice the last 2 bytes are the values we need
+
+0xc633640a >> 24 == 0x000000 c6
+0xc633640a >> 16 == 0x0000c6 33
+0xc633640a >> 8  == 0x00c633 64
+0xc633640a >> 0  == 0xc63364 0a
+
+Here you go its more easy to see , but we dont need the other parts we only need the last 2 digits , thats where tha AND mask comes in hand
+
+  0x00c63364
+& 0x000000ff
+------------
+  0x00000064
+
+As you can see it cancels the other numbers and keep the part we need wich is 0x64 , now we need to apply it to the rest
+
+(0xc633640a >> 24) & 0xff == 0x000000c6 == 0xc6
+(0xc633640a >> 16) & 0xff == 0x00000033 == 0x33
+(0xc633640a >> 8)  & 0xff == 0x00000064 == 0x64
+(0xc633640a >> 0)  & 0xff == 0x0000000a == 0x0a
+** Subnets And Host Refresher
+As we can remember an IP addr is split to two portions : Subnet Number & Host Number
+ Subnet   | Host
+          | 
+198.51.100.10
+
+So that represeants host number 10 on the subnet 198.51.100.0 (We replace the host bytes with 0 when talking about subnets)
+And there is 24 network bits in that ip addr , thats not really obvious so they invented a slash notation
+198.51.100.0/24    24 bits are used for subnet
+10.121.2.17/16    Host 2.17 on subnet 10.121.0.0
+And So on
+** Subnet Mask Refresher
+A subnet mask is a run of 1 bits in binary that indicates wich part of the ip addr is thenetwork portion and followed by a run of 0 bits to indicate wich part of the ip adrr is the host portion
+
+11111111.11111111.11111111.00000000   255.255.255.0  subnet mask!
+   
+11000110.00110011.01100100.00001010   198.51.100.10
+** Computing The Subnet Mask From Slash Notation
+[[/home/barnoun/Projects/pyfiles/subnetmask-calc.py][Subnet Mask Calculator]]
+** Finding the Subnet for an IP address
+If we have an ip addr and we want to find its subnet we can use Bitwise-and with the subnet mask
+  11111111.11111111.11111111.00000000   255.255.255.0  subnet mask
+& 11000110.00110011.01100100.00001010   198.51.100.10  IP address
+-------------------------------------
+  11000110.00110011.01100100.00000000   198.51.100.0  network number!
+* Ip Routing
+This chapter is all about routing , This task is handled by a computer named the *router* that know how to direct traffic down different line
+Every computer attached to the internet is actually a router and the all rely on each other
+We are going to talk about 2 big ideas
+Routing Protocols : How routers learn the map of the network
+Routing Algorithm : How routers decide wich direction to send the packets after they've learned the map
+** Routing Protocols
+Routing protocols in general have this goal: give routers enough information to make routing decisions.
+*** Interior Gateway Protocols
+When it comes to routing packets over the Internet, we’ll take a higher view. Let’s look at the Internet as a bunch of clumps of networks that are more loosely connected. “Clump” is not an official industry term, for the record. The official term is autonomous system (AS), which Wikipedia defines as:
+
+    […] a collection of connected Internet Protocol (IP) routing prefixes under the control of one or more network operators on behalf of a single administrative entity or domain, that presents a common and clearly defined routing policy to the Internet.
+
+But let’s think of it as a clump for now.
+
+For example, OSU has a clump of network. It has its own internal routers and subnets that are “on the Internet”. A FAANG company might have another clump of Internet.
+
+Within these clumps of Internet, an interior gateway protocol is used for routing. It’s a routing algorithm that is optimized for smaller networks with a small number of subnets.
+
+Here are some examples of interior gateway protocols
+========================================================================================
+Abbreviation | Name 	                                 | Notes
+OSPF 	   | Open Shortest Path First 	                 | Most commonly used, IP layer
+IS-IS 	   | Intermediate System to Intermediate System  | Link layer
+EIGRP 	   | Enhanced Interior Gateway Routing Protocol  | Cisco semi-proprietary
+RIP 	   | Routing Information Protocol 	         | Old, rarely used
+========================================================================================
+But of course you need to be able to communicate between these clumps of Internet–the whole Internet is connected after all. It would be a bummer if you couldn’t use Google’s servers from Oregon State. But clearly Google’s servers don’t have a map of OSU’s network… so how do they know how to route traffic?
+*** Exterior Gateway Protocols
+
+Having every router have a complete map of the Internet isn’t practical. Works fine on smaller clumps, but not on the whole thing.
+
+So we change it up for communication between these clumps and use an exterior gateway protocol for routing between the clumps.
+
+Remember the official term for “clump”? Autonomous Systems. Each autonomous system on the Internet is assigned an autonomous system number (ASN) that is used by the border gateway protocol (BGP) to help determine where to route packets.
+==========================================================
+Abbreviation | Name 	               | Notes
+BGP 	   | Border Gateway Protocol   | Used everywhere
+EGP 	   | Exterior Gateway Protocol | Obsolete
+==========================================================
+BGP can work in two different modes: internal BGP and external BGP. In internal mode, it acts as an interior gateway protocol, while external mode acts as an external gateway protocol.
+** Routing Tables
+A routing table is a is a definition of where to forward packets to get them faster along their destination , or if the destination is in the router's lan the routing table directs the router to send the traffic locally .
+Basically a routing table is a guide for the router to tell it where it should send packets or segments or whatever.
+** Routing Algorithm
+#+ATTR_ORG: :align center
+[[/home/barnoun/Pictures/beej18.png]]
+** Routing Example
+#+ATTR_ORG: :align center
+[[/home/barnoun/Pictures/beej19.png]]
+
+Our Job is to trace the route of some packets (PS:Read Beej Guide)
+1) 10.1.23.12 > 10.2.1.16
+   en0 > en3
+2) 10.1.99.2  > 10.1.99.6
+   en2 > en2
+...
+** Routing Loops and Time-To-Live
+It is possible to set up a loop where a packet travels in a circle forever .
+To fix this problem ip has a field in its header called TTL (Time To Live). This a one byte counter that starts at 255 and get decremented everytime a router forards it
+When the counter reacher zero the packet is discraded and an *ICMP* "Time exceeded" error message is returned to the sender
+** The Broadcast Address
+There’s also the broadcast address: 255.255.255.255. This goes to everyone…
+
+…And by everyone I mean everyone on the LAN. None of these broadcast packets make it past the router, not even 255.255.255.255. The routers don’t forward them anywhere.
+
+The world would be a very noisy place if they did.
+
+One of the main uses for it is when you first open your laptop on WiFi. The laptop doesn’t know its IP, the subnet mask, the default gateway, or even whom to ask. So it sends out a broadcast packet to 255.255.255.255 with a DHCP packet asking for that information. A DHCP server is listening and can then reply with the info.
+** DONE REFLECT
+1. What is the difference between an interior gateway protocol and an external gateway protocol?
+   > An interior gateway protocol is used for lan networks . an external gateway protocol is used when dealing with the greater internet
+2. What is the goal of a routing protocol in general?
+   > To automatically build the routing table so routers know the best path to all destinations
+3. What’s an example of a place where an interior gateway protocol would be used? And exterior?
+   > An interior gateway protocol would be used in a company as an example and wich is called autnomous systems (AS) . An exterior is used between Multiple As's
+4. What does a router use its routing table to determine?
+   > Source , destination , device
+5. What does an IP router do next with a packet if the destination IP address is not on one of its local subnets?
+   > It sends it to the default gateway
+6. Why would a process send anything to the broadcast address?
+   > To get to the dhcp server as an example
+* PROJECT : Computing And Finding Subnets
+[[/home/barnoun/Projects/pyfiles/Netfuncs/netfuncs.py][Netfuncs.py]]
+* The Link Layer And Ethernet 
+** Frames Vs Packets
+Data sent over the ethernet is called packets , within that packet there is a *frame* wich is like a sub-packet
+** Mac Addresses
+Every network interface have a MAC (Meddia Access Control) address , this is an address that is unique on the LAN thats used for sending / receiving data.
+A mac addr looks like this
+ac:d1:b8:df:20:85
+or like this
+ac-d1-b8-df-20-85
+or like this
+acd1.b8d.2085
+The mac addr should be unique on the LAN also the mac addr shouldnt be changed by the end user , it will only happend if you happen to have the same mac addr with another computer wich is rare
+First three bytes are OUI(Organizationally unique identifier) as the name says , its used to identify the company behind that netw interfacez
+** We are all in the same room ?
+Lots of modern link layer protocols that you’ll be directly exposed to operate on the idea that they’re all broadcasting into a shared medium and listening for traffic that’s addressed to them.
+but thats not very accuarate , there is a device called the *switch* and it typically prevents the packets to go to nodes that they're not supposed to.
+** Multiple Access Method
+Medium : We mean wires , or radio (wifi)
+So ill try to explain this , as far as i understood , a sender cant send stuff and recive at the same time so Multiple Access Method .
+There are a number of ways to do this :
+
+- You can transmit packets on different frequencies
+- You could send packets at different times
+- You could use spread spectrum or freq hopping
+- You could add another wire
+
+For now we are going to use the holy ethernet protocol as an example , ethernet is most like the "time-sharing" 
+
+Wired Ethernet uses *CSMA/CD* (Carrier-Sence Multiple ACcess with collision detection)
+It works like this :
+The ethernet card waits untill the room is quiet when no other network card is transmitting anything
+It Starts sending packets to its destination
+Also It listens while doing that
+If the signals it reads doesnt match the signals on the wire it knows that another network device started transmitting at the same time , this is a collision detection , the CD part in CSMA/CD
+To resolve the situation, the network card transmits a special signal called the “jam signal” to alert other cards on the network that a collision has occurred and they should stop transmitting. The network card then waits a small, partly random amount of time, and then goes back to step 1 to retry the transmission.
+
+Wifi ethernet uses something similar except its *CSMA/CA*
+The ethernet card waits untill the room is quiet Thats the Carrier-sence multiple access part
+if the channel isnt quiet the network card wait a random amount of ime and goes back to step 1
+** The holy ethernet
+Remember how each layer encapsulates the previos layer's data into its own header , ethernet is no different.
+Frame = Header , i guess
+
+The Packet:
+   7 octets: Preamble (in hex: AA AA AA AA AA AA AA)
+   1 octet: Start frame delimiter (in hex: AB)
+The Frame:
+   6 octets: Destination MAC address
+   6 octets: Source MAC address
+   4 octets: “Dot1q” tag for virtual LAN differentiation.
+   2 octets: Payload Length/Ethertype (see below)
+   46-1500 octets: Payload
+   4 octets: CRC-32 checksum
+   End of frame marker, loss of carrier signal
+   Interpacket gap, enough time to transmit 12 octets
+The payload length/EtherType fielld is used for payload length in normal usage but other values can be put there to indicate to payload structure
+Largest payload can be sent is 1500 octets , this is known as the MTU (Maximum transmission unit)
+After the frame, there’s an end-of-frame marker. This is indicated by loss of carrier signal on the wire, or by some explicit transmission in some versions of Ethernet.
+Lastly, there’s a time gap between Ethernet packets which corresponds to the amount of time it would take to transmit 12 octets.
+*** Two Layers Of Ethernet
+What we call the Internet “Link Layer” is the “Data Link” layer and the “Physical” layer.
+
+The Data Link layer of Ethernet is the frame. It’s a subset of the entire packet (outlined above) which is defined at the Physical Layer.
+
+Another way to consider this is that the Data Link Layer is busy thinking about logical entities like who has what MAC address and what the payload checksum is. And that that Physical Layer is all about figuring out which patterns of signals to send that correspond to the start and end of the packet and frame, when to lower the carrier signal, and how long to delay between transmissions.
+** DONE REFLECT
+1. What’s your MAC address on your computer? Do an Internet search to find how to look it up.
+   > d8:43:ae:48:ff:ad  
+2. What’s the deal with frames versus packets in Ethernet? Where in the ISO OSI network stack do they live?
+   > Packets is the actual data encapsulated by the link layer , frames are like headers.
+3. What’s the difference between a byte and an octet?
+   > A byte is maybe 8 bits , an octet is strictly an 8 bits
+4. What’s the main difference between CSMA/CD and CSMA/CA?
+   > /CD is used for wired ethernet . /CA is used for wireless ethernet
+* ARP : The Address Resolution Protocol
+We want to send to data to another computer in the LAN on the same subnet
+What we need to build the ethernet frame:
+The data we want to send
+The source MAC addr
+The Destination MAC Addr
+What We Have :
+The data we want to send
+the source mac addr
+the source ip addr
+the destination ip addr
+
+See , the destination mac addr is missing, we cant build the ethernet frame without it
+NOTE:Again we are talking about the lan , at the local ethernet not over the internet
+** Ethernet Broadcast Frames
+As we know network hardware listens for ethernet frame in the wire that are addressed specifically to it , ethernet frames for other mac addreses get ignored
+there is a way to override: The broadcast frame , this is a frame that has a destination mac addr of ff:ff:ff:ff:ff:ff . All devices on the lan will receive that frame
+** ARP
+The source computer will broadcast a specialized Ethernet frame that contains the destination IP address. This is the ARP request.
+
+(Remember the EtherType field from the previous chapter? ARP packets have EtherType 0x0806 to differentiate them from regular data Ethernet packets.)
+
+All computers on the LAN receive the ARP request and examine it. But only the computer with the IP address specified in the ARP request will continue. The other computers discard the packet.
+
+The destination computer with the specified IP address builds an ARP response. This Ethernet frame contains the destination computer’s MAC address.
+
+The destination computer sends the ARP response back to the source computer.
+
+The source computer receives the ARP response, and now it knows the destination computer’s MAC address.
+
+And it’s game-on! Now that we know the MAC address, we can send with impunity.
+** ARP Caching
+Since it’s a pain to ask a computer for its MAC address every time we want to send it something, we’ll cache the result for a while.
+
+Then, when we want to send to a particular IP on the LAN, we can look in the ARP cache and see if the IP/Ethernet pair is already there. If so, no need to send out an ARP request–we can just transmit the data right away.
+
+The entries in the cache will timeout and be removed after a certain amount of time. There’s no standard time to expiration, but I’ve seen numbers from 60 seconds to 4 hours.
+** ARP Structure
+The ARP data goes in the payload portion of the Ethernet frame. It’s fixed length. As mentioned before, it’s identified by setting the EtherType/packet length field to 0x0806.
+
+In the payload structure below, when it says “Hardware” it means the Link Layer (e.g. Ethernet in this example) and when it says “Protocol” it means Network Layer (e.g. IP in this example). It uses those generalized names for the fields since there’s no requirement that ARP use Ethernet or IP–it can work with other protocols, too.
+
+The payload structure, with a total fixed length of 28 octets:
+
+    2 octets: Hardware Type (Ethernet is 0x0001)
+    2 octets: Protocol Type (IPv4 is 0x8000)
+    1 octet: Hardware address length in octets (Ethernet is 0x06)
+    1 octet: Protocol address length in octets (IPv4 is 0x04)
+    2 octets: Operation (0x01 for request, 0x02 for reply)
+    6 octets: Sender hardware address (Sender MAC address)
+    4 octets: Sender protocol address (Sender IP address)
+    6 octets: Target hardware address (Target MAC address)
+    4 octets: Target protocol address (Target IP address)
+** Arp Request/Response
+Computer 1 : I have this ip whats ur mac
+Computer 2
+
+Sender hardware address: Computer 1’s MAC address
+Sender protocol address: Computer 1’s IP address
+Target hardware address: unused
+Target protocol address: the IP address Computer 1 is curious about
+
+Response
+
+Sender hardware address: Computer 2’s MAC address
+Sender protocol address: Computer 2’s IP address
+Target hardware address: Computer 1’s MAC address
+Target protocol address: Computer 1’s IP address
+** Other Arp Features
+*** Arp Announcements
+Computers announce their arp information when being online for other computers to put them in their arp cache
+*** Arp Probe
+A computer can send out a specially-constructed ARP request that basically asks, “Is anyone else using this IP address?”
+
+Typically it asks using its own IP address; if it gets a response, it knows it has an IP conflict.
+** IPv6 And ARP
+IPv6 has its own version of ARP called NDP (the Neighbor Discovery Protocol).
+
+The eagle-eyed among you might have noticed that ARP only supports protocol addresses (e.g. IP addresses) of up to 4 bytes, and IPv6 addresses are 16 bytes.
+
+NDP addresses this issue and more, defining a number of ICMPv6 (Internet Message Control Protocol for IPv6) that can be used to take the place of ARP, among other things.
+** DONE REFLECT
+1. Describe the problem ARP is solving.
+   > Not knowing wich mac addr to send to
+2. Why do entries in ARP caches have to expire?
+   > Because there will be a confilict if someone got out of the network and someone new got his old ip addr
+3. Why can’t IPv6 use ARP?
+   > Cuz ARP uses 4 byte ip addresses only :/
+* TODO PROJECT : Routing with Dijkstra's
+** Graphs Refresher
+Graphs are made from vertices and edges.
+Imagine a map that shows cities and highways , the vertices are the cities , the highways are the edges and the length of those highways are called edge 
+** Dijksta's Alrorithm Overview
+before dijkstra we need to talk about *BFT* : Breadth-First Traversal / Breadth-First Search
+2231100908
+A breadth first traversal is an algorithm who mesure the distance by hops : how many hops you did from a node to another.
+But thats not accuarate when you use that for wighted edges:
+1 hop could take 5 hours
+3 hops could take 30 min
+Tho the BFT algortihm will choose to go with the first option.
+* Network Hardware
+- Network Topology : Describes the layout of the network
+- Mbs : Megabits/s
+- Gbs : Gegabits/s
+- Bandwith : Mesured in b/s , how much data a certain type of cable can handle over a certain amount of time
+- What people typically think of as “Ethernet cable”. It’s a cable with plug-in jacks on either end. Internally, pairs of wires are twisted together to reduce interference. These cables have published maximum length “runs” that determine how far you can string a cable before you run into trouble, usually 50-100 meters depending on the cable and traffic speed.
+
+    10baseT: 10 Mbs twisted-pair for Ethernet
+    100baseTX: 100 Mbs twisted-pair for Fast Ethernet.
+    1000baseT: 1 Gbs twisted-pair for Gigabit Ethernet.
+    10GbaseT: 10 Gbs twisted-pair for 10 Gigabit Ethernet.
+    Category-5: Called cat-5 for short, a twisted pair wire built to category-5 specs. Good for Fast Ethernet.
+    Category-6: Called cat-6 for short, a twisted pair wire built to category-6 specs. Good for Gigabit Ethernet.
+- Network Ports : not to be confused with TCP/UDP port numbers , but the actual port in the hardware
+- Ethernet Cable : Conversational term meaning a twisted pair cable that you plug into Ethernet devices.
+- LAN : Local Area Network , this would be the network at your house , Think of a single IP subnet
+- WAN : Wide Area Network , A collection of LANs
+- Dynamic IP : When your ip addr is set by DHCP
+- Static IP : When you hardcode an ip for a computer
+- Network Interface Controller (NIC) : Network Interface Card, Network Adapter, LAN Adapter, Network Card: A bunch of different names for a hardware device that allows a computer to get on the network. This card might have Ethernet ports on it, or maybe it’s just pure wireless. It’s probably not even be a proper card these days–maybe it’s all on-board the same chip as a bunch of other I/O devices built into the motherboard.
+- Network Device (OS): A software device structure in the operating system that typically maps to a NIC. Some network devices like the loopback device don’t actually use a physical piece of hardware and just “transmit” data internally within the OS. On Unix-likes, these devices are named things like eth0, en1, wlan2 and so on. The loopback device is typically called lo.
+- MAC Address : Media acces control . a unique link layer address for computers
+- Hub : a device that allows you to connect serveral computers via ethernet cables , it is stupid because every computer connected to it is effectively on the same wire .
+- Switch : A hub with some brains , it knows the mac addr on the other side of the ports so it doesnt have to retransmit ethernet packets to everyone , it just sends them to the proper wire
+- Router : A network layer device that contains the routing table and handles routing to a given IP addr
+- Default Gateway : Its the router that handles traffic to all other destinations that are not in the lan
+- Broadcast : To send traffic to everyone on the LAN. This can be done at the Link Layer by sending an Ethernet frame to MAC address ff:ff:ff:ff:ff
+- Wi-Fi : Short for Wireless Fidelity (a non-technical marketing trademark presumably meant to pun Hi-Fi), this is your wireless LAN connection. Speaks Ethernet at the Link Layer. Very similar to using an Ethernet cable, except instead of electricity over copper, it uses radio waves.
+- FireWall : A computer or device at or near where you rLAN connects to you ISP that filters traffic , preventing unwanted traffic from being transmitted on your LAN
+- NAT : Network Address Translation. A way to have a private IP subnet behind the NAT device that is not visible to the rest of the Internet. The NAT device translates internal IP addresses and ports to an external IP on the router. This is why if you go to Google and ask “what is my ip”, you’ll get a different number than you’ll see when you look at the settings on your computer. NAT is in the middle, translating between your internal LAN IP address and the external, publicly-visible IP address. We’ll talk more about the details of this mechanism later
+- Private Network IPv4 Addresses : For LANs not connected to the Internet or LANs behind NAT, there are three common subnets that are used: 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16. These are reserved for private use; no public sites will ever use them, so you can put them on your LAN without worrying about conflicts.
+- Wifi Modem / router : refers to a consumer grade device that you get when you sign up with an isp
+- Bridge: A device that connects two networks at the link level, allowing them to behave as a single network. Some bridges blindly forward all traffic, other bridges are smarter about it. Cable modems are a type of bridge, though they often come built into the same box as a router and switch.
+* A lot of Packet Tracer stuff , ofc i did it on packet tracer duh
+* Select()
+** The problem we are solving
+Lets say we have 3 sockets , the server will want to recive data from the sockets so we do this:
+data1 = s1.recv(4096)
+data2 = s2.recv(4096)
+data3 = s3.recv(4096)
+Problem is that recv() if it does not recv anything it will blocks and stop anything else from running meaning that the recv() will sleep untill some data is sent , if no data is sent the code stops there.
+** Using select()
+first we need to import the select module. if we have a bunch of sockets we have to add them to a set and pass it to select , it will block untill one is ready
+we need to keep track on this set , we need to add sockets to it when a new one connects and we have to remove when a socket hungs up :)
+ex:
+read_set = {s1, s2, s3}
+ready_to_read, _, _ = select.select(read_set, {}, {})
+for s in read_to_read:
+    data = s.recv(4096)
+** Using select() With Listening sockets
+if select() blocks when listening for data how could we accept new clinets? , select handles that we can add a listening socket to the set, When the socket show *"ready-to-read"* means theres i new incoming connection to accept().
+** The Main Algoithm
+    call select() and get the sockets that are ready to read
+    for all sockets that are ready to read:
+        if the socket is the listener socket:
+            accept() a new connection
+            add the new socket to our set!
+        else the socket is a regular socket
+            recv() the data from the socket
+            if you receive zero bytes
+                the client hung up
+                remove the socket from tbe set!
+** Other select() Arguments
+read, write, exc = select.select(read_set, write_set, exc_set)
+*** The timeout
+I told a bit of a lie. There’s an optional fourth arguments, the timeout. It’s a floating point number of seconds to wait for an
+event to occur; if nothing occurs in that timeframe, select() returns and none of the returned sockets are shown as ready.
+** Using select() With send()
+** DONE REFLECT
+1. Why can’t we just call recv() on all the connected sockets? What does select() buy us?
+   > because if one client dont send data the whole program gets blocked
+2.  When select() shows a socket “ready-to-read”, what does it mean if the socket is a listening   socket versus a non-listenin socket?
+   > If the socket is listening socket it means there is a new connection waiting for accept(),if non-listening it means data are coming from that socket and we are ready to recv().
+3. Why do we have to add the listener socket to the set, anyway? Why not just call accept() and then call select()?
+   > because if select() doesnt recive anything it will block , and we cannot accept while select() is blocking. 
+* PROJECT : USING select()
+[[/home/barnoun/Projects/pyfiles/select/select_server.py][select.py]]
+* Domain Name System (DNS)
+** Typical Usage
+From a user standpoint, we configure our devices to have a “name server” that they contact to convert those names to IP
+addresses. (Probably this is configured with DHCP, but more on that later.)
+
+When you try to connect to example.com, your computer contacts that name server to get the IP address.
+
+If that name server knows the answer, it supplies it. But if it doesn’t, then a whole bunch of wheels get put into motion.
+
+Let’s start diving down into that process.
+** Domains And Ip Addresses
+if haven’t ever registered a domain (such as example.com or oregonstate.edu or google.com or army.mil), the process is
+something like this:
+
+1 Contact a domain registrar (i.e. some company that has the authority to sell domains).
+2 Choose a domain no one has picked yet.
+3 Pay them some money annually to use the domain.
+4 …
+5 Profit!
+
+But doing this is completely disconnected from the idea of an IP address. Indeed, domains can exist without IP addresses–they
+just can’t be used.
+
+Once you have your domain, you can contact a hosting company that will provide you with an IP address on a server that you can
+use.
+
+Now you have the two pieces: the domain and the IP address.
+
+But you still have to connect them so people can look up your IP if they have your domain name.
+
+To do this, you add a database record with the pertinent information to a server that’s part of the DNS landscape: a domain name
+server.
+** (Domain) Name Servers
+Usually called name servers for short, these servers contain IP records for the domain in which they are an authority. That is, a
+name server doesn’t have records for the entire world; it just has them for a particular domain or subdomain.
+
+ A subdomain is a domain administered by the owner of a domain. For example, the owner of example.com might make
+ subdomains sub1.example.com and sub2.example.com. These aren’t hosts in this case–but they can have their own hosts, e.g.
+ host1.sub1.example.com, host2.sub1.example.com, somecompy.sub2.example.com.
+
+ Domain owners can make as many subdomains as they want. They just have to make sure they have a name server set up to
+ handle them.
+
+A name server that’s authoritative for a specific domain can be asked about any host on that domain.
+
+The host is often the first “word” of a domain name, though it’s not necessarily.
+
+For example with www.example.com, the host is a computer called www on a domain example.com.
+
+A single name server might be authoritative for many domains.
+
+But even if a name server doesn’t know the IP address of the domain it’s been asked to provide, it can contact some other name
+servers to figure it out. From a user perspective, this process is transparent.
+
+So, easy-peasy. If I don’t know the domain in question, I’ll just contact the name server for that domain and get the answer from
+them, right?
+** Root Name Server
+We have an issue, though. How can I connect to the name server for a domain if I don’t know what the name server is for a
+domain?
+
+To solve this, we have a number of root name servers that can help us on our way. When we don’t know an IP, we can start with
+them and ask them to tell us the IP, or tell us which other server to ask. More on that process in a minute.
+
+Computers are preconfigured with the IP addresses of the 13 root name servers. These IPs rarely ever change, and only one of
+them is needed to work. Computers that perform DNS frequently retrieve the list to keep it up to date.
+
+The root name servers themselves are named a to m:
+
+a.root-servers.net
+b.root-servers.net
+c.root-servers.net
+...
+k.root-servers.net
+l.root-servers.net
+m.root-servers.net
+
+** Example Run
+
+Let’s start by doing a query on a computer called www.example.com. We need to know its IP address. We don’t know which name
+server is responsible for the example.com domain. All we know is our list of root name servers.
+
+1 Let’s choose a random root server, say c.root-servers.net. We’ll contact it and say, “Hey, we’re looking for www.example.com.
+ Can you help us?”
+
+ But the root name server doesn’t know that. It says, “I don’t know about that, but I can tell you if you’re looking for any .com
+ domain, you can contact any one of these name servers.” It attaches a list of name servers who know about the .com domains:
+
+a.gtld-servers.net
+b.gtld-servers.net
+c.gtld-servers.net
+d.gtld-servers.net
+e.gtld-servers.net
+f.gtld-servers.net
+g.gtld-servers.net
+h.gtld-servers.net
+i.gtld-servers.net
+j.gtld-servers.net
+k.gtld-servers.net
+l.gtld-servers.net
+m.gtld-servers.net
+2 So we choose one of the .com name servers.
+
+ “Hey h.gtld-servers.net, we’re looking for www.example.com. Can you help us?”
+
+ And it answers, “I don’t know that name, but I do know the name servers for example.com. You can talk to one of them. It
+ attaches the list of name servers who know about the example.com domain:
+
+a.iana-servers.net
+b.iana-servers.net
+3 So we choose one of those servers.
+
+ “Hey a.iana-servers.net, we’re looking for www.example.com. Can you help us?”
+
+ And that name server answers, “Yes, I can! I know that name! Its IP address is 93.184.216.34!”
+
+So for any lookup, we start with root name server and it directs us on where to go to find more info. (Unless the information has
+been cached somewhere, but more on that later.)
+** Zones
+The Domain Name System is split into logical administrative zones. A zone is, loosely, a collection of domains under the authority of a particular name server.
+** Resolver library
+When you write software that uses domain names, it calls a library to do the DNS lookup. You might have noticed that in Python
+when you called:
+
+s.connect(("example.com", 80))
+
+you didn’t have to worry about DNS at all. Behind the scenes, Python did all that work of looking up that domain in DNS.
+
+In C, there’s a function called getaddrinfo() that does the same thing.
+
+The short of it is that there’s a library that we can use and we don’t have to write all that code ourselves.
+** Caching Servers
+Imagine all the DNS lookups that are happening globally. If we had to go to the root servers for every request, not only would that
+take a long time for repeated requests, but the root servers would get absolutely hammered.
+
+To avoid this, all DNS resolver libraries and DNS servers cache their results.
+
+ As it is, the root servers handle literally trillions of requests per day.
+
+This way we can avoid overloading the root servers with repeated requests.
+
+So we’re going to have to amend the outline we already went over.
+
+1 Ask our resolver library for the IP address. If it has it cached, it will return it.
+
+2 If it doesn’t have it, ask our local name server for the IP address. If it has it cached, it will return it.
+
+3 If it’s not cached and if this name server has another upstream name server (that is, another nameserver it can appeal to for
+ answers), it asks that name server for the answer.
+
+4 If it’s not cached and if this name server does not have another upstream name server, it goes to the root servers and the
+ process continues as before.
+
+With all these possible opportunities to get a cached result, it really helps take the load off the root name servers./
+
+Lots of WiFi routers you get also run caching name servers. So when DHCP configures your computer, your computer uses your
+router as a DNS server for the computers on your LAN. This gives you a snappy response for DNS lookups since you have a really
+short ping time to your router.
+** TTL (Time To Live)
+Since the IP address for a domain or host might change, we have to have a way to expire cache entries.
+
+This is done through a field in the DNS record called time to live (TTL). This is the number of seconds a server should cache the
+results. It’s commonly set to 86400 seconds (1 day), but could be more or less depending on how often a zone administrator thinks
+** Record Types
+A: An address record for IPv4. This is the type of record we’ve been talking about this whole time. Answers the question, “What
+ is the IPv4 address for this host or domain?”
+
+AAAA: An address record for IPv6. Answers the question, “What is the IPv6 address for this host or domain?”
+
+NS: A name server record for a particular domain. Answers the question, “What are the name servers answering for this host or domain?”
+
+MX: A mail exchange record. Answers the question, “What computers are responsible for handling mail on this domain?”
+
+TXT: A text record. Holds free-form text information. Is sometimes used for anti-spam purposes and proof-of-ownership of a domain.
+
+CNAME: A canonical name record. Think of this as an alias. Makes the statement, “Domain xyz.example.com is an alias for abc.example.com.”
+
+SOA: A start of authority record. This contains information about a domain, including its main name server and contact information.
+** Dynamic DNS
+Typical users of the Internet don’t have a static IP address (that is, dedicated or unchanging) at their house. If they reboot their
+modem, their ISP might hand them a different IP address.
+
+This causes a ruckus with DNS because any DNS records pointing to their public IPs would be out of date.
+
+Dynamic DNS (DDNS) aims to solve this problem.
+
+In a nutshell, there are two mechanisms at play:
+
+1 A way for a client to tell the DDNS server what their IP address is.
+
+2 A very short TTL on the DDNS server for that record.
+
+While DNS defines a way to send update records, a common other way is for a computer on your LAN to periodically (e.g. every 10
+minutes) contact the DDNS provider with an authenticated HTTP request. The DDNS server will see the IP address it came from
+and use that to update its record.
+** Reverse DNS
+If you have an ip addr you could get the host name for it , reverse dns lookup
+** DONE REFLECT
+1. What is your name server for your computer right now? 
+   > My router
+2. Do the root name servers know every IP address in the world?
+   > No , but they know where to direct you
+3. Why would anyone use dynamic DNS?
+   > If someone does not have a static ip addr and wants to host something they have to use ddns
+* Network Addres Translation (NAT)
+In this chapter we’ll be taking a look at network address translation, or NAT.
+
+This is a service provided on a router which hides a “private” LAN from the rest of the world.
+** A snail-mail Analogy
+When you want to send an annonymous mail you dont want to send the letter with your home address you send it to a provider and then the provider sends to the addr you want with their addr , and they keep track of that letter for you , when it comes back it get sent to you by the service provider of annonymous mail
+** Why?
+There are two main reasons to use this type of service.
+1. You want to hide your network details from the rest of the world.
+2. You need more IP addresses than either (a) anyone is willing to allocate to you or (b) you’re willing to pay for.
+*** Hiding Your Network
+There’s no easy way to get random, unsolicited packets onto the private network through the gateway running NAT.
+
+ You can possibly do it with something called source routing, but that’s not commonly enabled by ISPs.
+
+You’d have to have the private IP on the packet and get that packet to the router. There’s no way to do this unless you’re on the
+same LAN as the router, and that’s really unlikely.
+
+Regarding the second point, we should talk about the phenomenon known as address space exhaustion.
+*** IPv4 Exhaustion
+There are really a limited number of IPv4 addresses in the world. As such, getting a large block of them costs a lot of money.
+Its cheaper to get a handful of addresses and then have large priveate networks behind NAT routers, this way we can have a lot of ips and we dont have to run out of them
+** Private Networks
+There are subnets that are reserved for use as private networks. Routers don’t forward these addresses directly. If a router on the
+greater Internet sees an IP from one of these subnets, it will drop it.
+
+For IPv4 there are three such subnets:
+==============
+10.0.0.0/8
+172.16.0.0/12
+192.168.0.0/16
+==============
+The last of these is really common on household LANs.
+Again, routers on the Internet will drop packets with these addresses. The only way data gets from these IPs onto the Internet is
+via NAT.
+** How it works
+so to be as easy as possible and cuz i am a lazy fuck to write a ton of explanation its just like this:
+You send the request to your gateway , your gateway checks if the dest addr is on the lan if not it modify its ip source to its public ip and keep track of who sent it on the lan to send it back when it recive the response or if you want to you can read all this:
+For this demo, we’re going to use IP:port notation. The number after the colon is the port number.
+
+Also, we’ll use the term “Local Computer” to refer to the computer on the LAN, and “Remote Computer” or “Remote Server” to
+refer to the distant computer it’s connecting to.
+
+And finally, the local LAN router will just be called “The Router” or the “NAT Router”.
+
+Let’s go!
+
+On my LAN, I want to go from 192.168.1.2:1234 on my private LAN to the public address 203.0.113.24:80–that’s port 80, the HTTP
+server.
+
+The first thing my computer does is check to see if the destination IP address is on my LAN… Since my LAN is 192.168.0.0/16 or
+smaller, then no, it’s not.
+
+So my computer sends it to the default gateway, my router that has NAT enabled.
+
+The router is going to play the role of the “anonymizer” middleman in the earlier analogy example. And recall that the router has
+two interfaces on it–one faces the internal 192.168.0.0/16 private LAN, and the other faces the greater Internet with a public,
+external IP. Let’s use 192.168.1.1 as the private IP address on the router and 198.51.100.99 as the public IP.
+
+So the LAN looks like this:
+
++----------+-------------+
+|  Local   |             |
+| Computer | 192.168.1.2 |>-------+
++----------+-------------+        |
+                                  |
+                                  ^
+                          +---------------+
+                          |  192.168.1.1  |  Internal IP
+                          +---------------+
+                          |    Router     |  NAT-enabled
+                          +---------------+
+                          | 198.51.100.99 |  External IP
+                          +---------------+
+                                  v
+                                  |
+                                  |
+                       {The Greater Internet}
+
+The router now has to “repackage” the data for the greater Internet. This means rewriting the packet source to be from the
+router’s public IP and some unused port on the public interface of the router. (The port doesn’t need to be the same as the port
+originally on the packet. The router allocates a random unused port when the new packet is sent out.))
+
+So the router records all this information:
+
+  Computer  IP  Port  Protocol    
+  Local Private Address  192.168.1.2  1234  TCP    
+  Remote Public Address  203.0.113.24  80  TCP    
+  Router Public Address  198.51.100.99  5678  TCP    
+
+(Note: except for 80, since we’re connecting to HTTP in this example, all port numbers were randomly chosen.)
+
+So while the original packet was:
+
+192.168.1.2:1234 --> 203.0.113.24:80
+
+     Local               Remote
+    Computer            Computer
+
+the NAT router rewrites it to be the same destination, but the router as the source.
+
+198.51.100.99:5678 --> 203.0.113.24:80
+
+    NAT router             Remote
+                          Computer
+
+From the destination’s point of view, it is completely unaware that this isn’t originally from the router itself.
+
+So the destination replies with some HTTP data, sending it back to the router:
+
+203.0.113.24:80 --> 198.51.100.99:5678
+
+    Remote              NAT router
+   Computer
+
+The router then looks at its records. It says, “Wait a moment–if I get data on port 5678, that means I need to translate this back to
+a private IP on the LAN!
+
+So it translates the message so that it’s no longer addressed to the router, but instead is sent to the private source IP recorded
+earlier:
+
+203.0.113.24:80 --> 192.168.1.2:1234
+
+    Remote               Local
+   Computer             Computer
+
+And sends that out on the LAN. And its received! The LAN computer thinks it’s talking to the remote server, and the remote server
+thinks it’s talking to the router! NAT!
+
+It might be a little confusing in that last step that the packet is coming from the NAT router but is actually IP addressed like it came
+from the Remote Computer. This is OK on the LAN because the NAT router sends that IP packet out with an Ethernet address of the
+Local Computer on the LAN. Or, put another way, the NAT router can use link layer addressing to get the packet delivered to the
+Local Computer and the IP address of where that packet came from doesn’t have to match the internet IP of the NAT router.
+** Port Forwarding
+If you have a server running behind the NAT router, how can it serve content to the outside world? After all, no one on the outside
+can refer to it by its internal IP address–all they can see is the router’s external IP.
+
+But you can configure the NAT router to do something called port forwarding.
+
+For example, you could tell it that traffic sent to its public IP port 80 should be forwarded to some private IP on port 80. The router
+forwards the traffic, and the original sender is unaware that its traffic is ultimately arriving at a private IP.
+
+There’s no reason the same port must be used.
+
+For example, SSH uses port 22, and that’s fine on the computer on the private network. But if you forward from the public port 22,
+you’ll find malicious actors are continuously trying to log in through it. (Yes, even on your computer at home.) So it’s more
+common to use some other uncommon port as the public SSH port, and then forward it to port 22 on the LAN.
+** DONE REFLECT
+1. Look up your computer’s internal IP address. (Might have to search the net to see how to do this.) Then go to google.com and type “what is my ip”. The numbers are (very probably) different. Why?
+   > Because your local ip is behind a nat , the public internet cant see it but it can see your router's public ip addr
+2. What problems does NAT solve?
+   > NAT solves the problem of limited ip addresses
+* Dynamic Host Configuration Protocl (DHCP)
+** Operation
+The overview:
+Client --> [DHCPDISCOVER packet] --> Server
+
+Client <-- [DHCPOFFER packet] <-- Server
+
+Client --> [DHCPREQUEST packet] --> Server
+
+Client <-- [DHCPACK packet] <-- Server
+The details:
+When your laptop first tries to connect to the network, it sends a DHCPDISCOVER packet to the broadcast address
+(255.255.255.255) over UDP to port 67, the DHCP server port.
+Recall that the broadcast address only propagates on the LAN–the default gateway does not forward it.
+On the LAN is another computer acting as the DHCP server. There’s a process running on it waiting on port 67.
+The DHCP server process sees the DISCOVER and decides what to do with it.
+The typical use is that the client wants an IP address. We call this leasing an IP from the DHCP server. The DHCP server is
+tracking which IPs have been allocated and which are free out of its pool.
+In response to the DHCPDISCOVER packet, the DHCP server sends a DHCPOFFER response back to the client on port 68.
+The offer contains an IP address and potentially a lot of other pieces of information including, but not limited to:
+Subnet mask
+Default gateway address
+The lease time
+DNS servers
+The client can accept or ignore the offer. (Maybe there are multiple DHCP servers making offers, but the client may only accept
+one of them.)
+If the offer is accepted, the client sends a DHCPREQUEST back to the server notifying it that it wants that particular IP address.
+Finally, if all’s well, the server replies with an acknowledgment packet, DHCPACK.
+At that point, the client has all the information it needs to participate on the network.
+** DONE REFLECT
+1. Reflect on the advantages of using something like DHCP over manually configuring the devices on your LAN.
+   > Not all people can deal with the nerd stuff , and we cant configure all the things , a smart bulb is going to be hard to configure and we dont keep track of ip addresses we use
+2. What types of information does a DHCP client receive from the DHCP server?
+   > Gateway , dns servers, client ip addr , subnet mask
+* Port Scanning
+** Mechanics Of A Port Scanner
+A portscanner will attempt to find listening server processes on a range of ports on a specified IP. (Sometimes the range is all
+ports.)
+
+With TCP, the general approach is to try to set up a connection with the connect() call on the candidate port. If it works, we have
+an open port, and the portscanner outputs that information. Nothing is sent over the connection, and it is closed immediately.
+
+ The job of the portscanner is to identify open ports, not to send or receive other data unnecessarily.
+
+Calling connect() causes the TCP connection to complete its three-way handshake. This isn’t strictly necessary, since if the
+portscanner gets any reply from the server (i.e. the second part of the three way handshake) then we know the port is open.
+Completing the handshake would cause the remote OS to wake up the server on that port for a connection we know we’re just
+going to close anyway.
+
+Some TCP portscanners will instead build a TCP SYN packet to start the handshake and send that to the port. If they get a SYN-ACK
+reply, they know the port is open. But then, instead of completing the handshake with an ACK, they send a RST (reset) causing the
+remote OS to terminate the nascent connection entirely–and causing it to not wake up the server on that port.
+*** PortScanning Udp
+One technique is to send a UDP packet to a port and see if you get an ICMP “destination unreachable” message back. If so, the
+port is not open.
+
+If you don’t get a response, maybe the port is open. Or maybe the UDP packet is being filtered out and dropped with no ICMP
+response.
+
+Another option is to send a UDP packet to a known port that might have a server behind it. If you get a response from the server,
+you know the port is open. If not, it’s closed or your traffic was filtered out.
+* FireWalls
+** FireWall Operation
+If you think about a packet arriving at a router, that router has the capability to inspect that packet all it wants. It can look at the
+source and destination IPs, or the ports, or even the application layer data.
+So that gives it the opportunity to make a decision about whether or not to keep forwarding that packet based on any of that
+data.
+For example, the firewall might be configured to allow any port 80 (HTTP) traffic to come from the outside of the firewall to the
+inside, but block incoming traffic on all other destination ports.
+Or maybe it’ll be configured to only allow certain IP addresses to connect.
+So the firewall, on receipt of a packet, looks at its configured rules and decides whether or not to drop the packet (if it’s being
+filtered out), or forward the packet normally.
+when it decides to drop the packet it can either silently drop it or it can reply with a *ICMP* Destination ureachable message
+For example, if someone behind the firewall establishes a TCP connection over the Internet from a random port, we want to be able to get traffic back to that host from that random port.
+we have to use stateful filtering , the firewall sees the tcp three-wa handshake and knows then that there is a valid connection , it can allow connection through that port.
+In order to stop the firewall from timing out , the program could send a keepalive message
+** FireWalls And NAT
+The role of the firewall at its core is not to separate public and private networks–that’s NAT’s role–but rather to control which
+traffic is allowed to pass through the firewall.
+** DONE REFLEECT
+1. What’s the difference/relationship between a firewall and a router?
+   > A router routes data , a firewall allow data or denies it
+2. What’s the difference/relationship between a firewall and NAT?
+   > A NAT seperates the local network from the public network
+* APPENDIX : Multithreading
+** Concepts
+- Thread : Its a representation of *Thread Of Execution* , it is a part of the program that is executing at this particular moment  , if you want multiple part of the program to excute at the same time you can place them in seperate threads
+- Main Thread : Its just the code that you run without thinking about threads
+- Spawning : spawning a new thread to run on a particular function , if we do this this func will execute at the same time as the main thread
+- Join : A thread can wait for another to exit by calling that thread’s join() method. This conceptually joins the other thread back up to the calling thread. Usually this is the main thread join()ing the threads it spawned back to itself.
+- Target : Its the function the the thread will run
+  
