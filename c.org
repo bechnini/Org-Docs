@@ -1,0 +1,671 @@
+* Hello World !
+- There are 2 stages of compilation : Preprocessing And Compiling
+Anything that starts with a hash symbol / pound sing / octothorpe (#) , is something the preprocessor handle .
+- Compilation is the process of taking your C source code and turning it into a program that your operating system can execute.
+- *gcc -Wall -Wextra -std=c23 -pedantic foo.c*
+* Variables:
+It’s said that “variables hold values”. But another way to think about it is that a variable is a human-readable name that refers to some data in memory.
+So a variable is a name for some data that’s stored in memory at some address.
+** Variable Types
+printf() hunts through the format string for a variety of special sequences which start with a percent sign (%) that tell it what to print. For example, if it finds a %d, it looks to the next parameter that was passed, and prints it out as an integer. If it finds a %f, it prints the value out as a float. If it finds a %s, it prints a string.
+** Boolean Types
+In c23 you have to include a header to use boolean types : <stdbool.h>
+But be careful if you mix and match since the numeric value of true is 1, probably39, and if you’re relying on some other positive value to be true, you might get a mismatch. For example:
+
+printf("%d\n", true == 12);  // Prints "0", false!
+** Arithmetic
+i = i + 3;  // Addition (+) and assignment (=) operators, add 3 to i
+i = i - 8;  // Subtraction, subtract 8 from i
+i = i * 9;  // Multiplication
+i = i / 2;  // Division
+i = i % 5;  // Modulo (division remainder)
+** Ternary Operator
+// If x > 10, add 17 to y. Otherwise add 37 to y.
+
+y += x > 10? 17: 37;
+** Pre-/-Post Increment/Decrement
+++i;        // Add one to i (pre-increment)
+--i;        // Subtract one from i (pre-decrement)
+
+With pre-increment and pre-decrement, the value of the variable is incremented or decremented before the expression is evaluated. Then the expression is evaluated with the new value.
+j = 5 + ++i;  // Increment i, then compute 5 + i
+** Conditional Operatros
+a == b;  // True if a is equivalent to b
+a != b;  // True if a is not equivalent to b
+a < b;   // True if a is less than b
+a > b;   // True if a is greater than b
+a <= b;  // True if a is less than or equal to b
+a >= b;  // True if a is greater than or equal to b
+** Boolean Operators
+"&&" 	and
+"||" 	or
+"!" 	not
+** The sizeof Operator
+int a = 999;
+
+// %zu is the format specifier for type size_t
+// If your compiler balks at the "z" part, leave it off
+
+printf("%zu\n", sizeof a);      // Prints 4 on my system
+printf("%zu\n", sizeof(2 + 7)); // Prints 4 on my system
+printf("%zu\n", sizeof 3.14);   // Prints 8 on my system
+
+// If you need to print out negative size_t values, use %zd
+** The switch Statement
+#include <stdio.h>
+
+int main(void)
+{
+    int goat_count = 2;
+
+    switch (goat_count) {
+        case 0:
+            printf("You have no goats.\n");
+            break;
+
+        case 1:
+            printf("You have a singular goat.\n");
+            break;
+
+        case 2:
+            printf("You have a brace of goats.\n");
+            break;
+
+        default:
+            printf("You have a bona fide plethora of goats!\n");
+            break;
+    }
+}
+
+
+switch (x) {
+    case 1:
+        printf("1\n");
+        // Fall through!
+    case 2:
+        printf("2\n");
+        break;
+    case 3:
+        printf("3\n");
+        break;
+}
+
+If x == 1, this switch will first hit case 1, it’ll print the 1, but then it just continues on to the next line of code… which prints 2!
+
+Earlier I said that switch works with integer types—keep it that way. Don’t use floating point or string types in there. One loophole-ish thing here is that you can use character types because those are secretly integers themselves. So this is perfectly acceptable:
+* Functions
+Its the usual *wink*
+You might notice something about the sample code we’ve been using… That is, we’ve been using the good old printf() function without defining it or declaring a prototype! How do we get away with this lawlessness? We don’t, actually. There is a prototype; it’s in that header file stdio.h that we included with #include, remember? So we’re still legit, officer!
+PS:REMEMBER TO PUT VOID IN EMPTY PAREMETERS FUNCS
+* The Fucking Pointers !
+Pointers are one of the most feared things in the C language. In fact, they are the one thing that makes this language challenging at all. But why?
+
+Because they, quite honestly, can cause electric shocks to come up through the keyboard and physically weld your arms permanently in place, cursing you to a life at the keyboard in this language from the 70s!
+
+I loved this lmao
+** Memory And Variables
+Another analogy might be with house addresses. You can have a house with certain qualities, yard, metal roof, solar, etc. Or you could have the address of that house. The address isn’t the same as the house itself. One’s a full-blown house, and the other is just a few lines of text. But the address of the house is a pointer to that house. It’s not the house itself, but it tells you where to find it.
+[[/home/barnoun/Projects/cfiles/pointer.c][Pointer.c]]
+
+Wait—you have 140 terabytes of RAM? Yes! Don’t you? But I do fib my buns off; of course I don’t (ca. 2024). Modern computers use a miraculous technology called virtual memory49 that makes processes think they have the entire memory space of your computer to themselves, regardless of how much physical RAM backs it up. So even though the address was that huge number, it’s being mapped to some lower physical memory address by the virtual memory system of my CPU. This particular computer has 16 GB RAM (again, ca. 2024, but I’m running Linux, so that’s plenty). Terabytes of RAM? I’m a teacher, not a dot-com bazillionaire. None of this is anything any of us have to worry about except the part about me not being phenomenally wealthy.
+** Passing pointers as an argument
+void increment(int *p)  // receives the ADDRESS
+{
+    *p = *p + 1;        // changes the ORIGINAL in memory
+}                       // no return needed!
+
+int main() {
+    int i = 10;
+    increment(&i);      // passes the ADDRESS of i
+    printf("%d", i);   // NOW 11! (changed directly)
+}
+look at this magnificent piece of code , when we use increment(&i) the function changes the value in memory that it is pointing too , i understood it tho i dont know how to phrase it lmao . i think thats whats hard about pointers , talking about them
+** NULL pointer
+Despite being called the billion dollar mistake by its creator51, the NULL pointer is a good sentinel value52 and general indicator that a pointer hasn’t yet been initialized.
+
+(Of course, like other variables, the pointer points to garbage unless you explicitly assign it to point to an address or NULL.) 
+** sizeof And Pointers
+int *p;
+
+// Prints size of an 'int'
+printf("%zu\n", sizeof(int));
+
+// p is type 'int *', so prints size of 'int*'
+printf("%zu\n", sizeof p);
+
+// *p is type 'int', so prints size of 'int'
+printf("%zu\n", sizeof *p);
+* Arrays
+#include <stdio.h>
+
+int main(void)
+{
+    int row, col;
+
+    int a[2][5] = {      // Initialize a 2D array
+        {0, 1, 2, 3, 4},
+        {5, 6, 7, 8, 9}
+    };
+
+    for (row = 0; row < 2; row++) {
+        for (col = 0; col < 5; col++) {
+            printf("(%d,%d) = %d\n", row, col, a[row][col]);
+        }
+    }
+}
+
+We can use multidimensional Arrays
+
+int a[3][3] = {[0][0]=1, [1][1]=1, [2][2]=1};
+
+We can initialize wich explicit indexes like above
+
+PS:When passing multidimensional arrays to a function c needs to know the length of them : void 2d_array(int a[2][3])
+* Strings
+Finally! Strings! What could be simpler?
+
+Well, turns out strings aren’t actually strings in C. That’s right! They’re pointers! Of course they are!
+
+Much like arrays, strings in C barely exist.
+
+My reaction : BRUHHHHHHHHHH
+** String Literals
+"When asked if this string had quotes in it, she replied, \"It does.\""
+when we want to print actual "" we use backslashes to escape it or smth like that
+** String Variables as Arrays
+char s[14] = "Hello, world!";
+
+// or, if we were properly lazy and have the compiler
+// figure the length for us:
+
+char s[] = "Hello, world!";
+
+This means you can use array notation to access characters in a string. Let’s do exactly that to print all the characters in a string on the same line
+
+also look at this
+
+#include <stdio.h>
+
+int main(void)
+{
+    char *s = "Hello, world!";   // char* here
+
+    for (int i = 0; i < 13; i++)
+        printf("%c", s[i]);    // But still use arrays here...?
+    printf("\n");
+}
+
+And we still using arrays , wow c.
+this is yet another hint that arrays and pointers are the same thing, deep down. 
+** Strin initializers
+
+
+We’ve already seen some examples with initializing string variables with string literals:
+
+char *s = "Hello, world!";
+char t[] = "Hello, again!";
+
+But these two initializations are subtly different. A string literal, similar to an integer literal, has its memory automatically managed by the compiler for you! With an integer, i.e. a fixed size piece of data, the compiler can pretty easily manage it. But strings are a variable-byte beast which the compiler tames by tossing into a chunk of memory, and giving you a pointer to it.
+
+This form points to wherever that string was placed. Typically, that place is in a land faraway from the rest of your program’s memory – read-only memory – for reasons related to performance & safety.
+
+char *s = "Hello, world!";
+
+So, if you try to mutate that string with this:
+
+char *s = "Hello, world!";
+
+s[0] = 'z';  // BAD NEWS: tried to mutate a string literal!
+
+The behavior is undefined. Probably, depending on your system, a crash will result.
+
+But declaring it as an array is different. The compiler doesn’t stow those bytes in another part of town, they’re right down the street. This one is a mutable copy of the string – one we can change at will:
+
+char t[] = "Hello, again!";  // t is an array copy of the string 
+t[0] = 'z'; //  No problem
+
+printf("%s\n", t);  // "zello, again!"
+** Getting String Length
+There is a function in <string.h> called strlen() and it return a type of size_t we print it out with %zu
+** String Termination
+c does strings a little different than most programming languages , when making a language you have 2 choices for storing a string in memory:
+1. Store the bytes along with a number indicating the length of it
+2. Store the bytes and mark at the end of the string with a special byte called the /terminator/
+If you want strings longer than 255 characters, option 1 requires at least two bytes to store the length. Whereas option 2 only requires one byte to terminate the string. So a bit of savings there.
+
+Of course, these days it seems ridiculous to worry about saving a byte (or 3—lots of languages will happily let you have strings that are 4 gigabytes in length). But back in the day, it was a bigger deal.
+** String Copy
+If you want to make a copy of a string, you have to copy it a byte at a time—this means that you’re going to take the individual bytes of the string from one place in memory and duplicate them somewhere else in memory. This is made easier with the strcpy() function , we also need to include the <string.h> header
+* Structs
+In C, we have something called a struct, which is a user-definable type that holds multiple pieces of data, potentially of different types.
+
+It’s a convenient way to bundle multiple variables into a single one. This can be beneficial for passing variables to functions (so you just have to pass one instead of many), and useful for organizing data and making code more readable.
+** Declaring a struct
+struct car {
+    char *name;
+    float price;
+    int speed;
+};
+We also can declare some :
+struct car saturn;  // Variable "saturn" of type "struct car"
+But we should initialize the variable saturn , but how do we set values to individual fields
+
+saturn.name = "Saturn SL/2";
+saturn.price = 15999.99;
+saturn.speed = 175;
+
+printf("Name:           %s\n", saturn.name);
+printf("Price (USD):    %f\n", saturn.price);
+printf("Top Speed (km): %d\n", saturn.speed);
+** Struct initializers
+struct car {
+    char *name;
+    float price;
+    int speed;
+};
+
+// Now with an initializer! Same field order as in the struct declaration:
+struct car saturn = {"Saturn SL/2", 16000.99, 175};
+
+printf("Name:      %s\n", saturn.name);
+printf("Price:     %f\n", saturn.price);
+printf("Top Speed: %d km\n", saturn.speed);
+
+The fact that the fields in the initializer need to be in the same order is a little freaky. If someone changes the order in struct car, it could break all the other code!
+
+struct car saturn = {.speed=175, .name="Saturn SL/2"};
+** Passing Structs to Functions
+We can do it in 2 ways:
+1. We can pass the struct
+2. We can pass the pointer to that struct
+
+Recall when you pass something to a function ,a copy of that get made , if the struct is large its better to pass the pointer of it
+so there are 2 cases if you want to pass a pointer instead of the whole struct
+1. You want to change stuff inside the struct
+2. The struct is large
+** The Arrow Operator
+void set_price(struct car *c, float new_price) {
+    // (*c).price = new_price;  // Works, but non-idiomatic :(
+    //
+    // The line above is 100% equivalent to the one below:
+
+    c->price = new_price;  // That's the one!
+}
+So when accessing fields, when do we use dot and when do we use arrow?
+
+    If you have a struct, use dot (.).
+    If you have a pointer to a struct, use arrow (->).
+** Copying And Returning structs
+  Here’s an easy one for you!
+
+Just assign from one to the other!
+
+struct car a, b;
+
+b = a;  // Copy the struct
+
+And returning a struct (as opposed to a pointer to one) from a function also makes a similar copy to the receiving variable.
+
+This is not a “deep copy”. All fields are copied as-is, including pointers to things.   
+* File I/O
+** The FILE* datatype
+We dont say a file we actually refers to it as a *stream* , but a *stream* isnt a file , there is other types of streams and we will talk about this 3:
+- stdin    : Standard input , The Keyboard by default
+- stdout   : Standard output , the screen by default
+- stderr   : Standard error , the screen by default
+** Reading Text Files
+There is 2 types of streams , text and binary more on binary later we will focus on binary later
+#+BEGIN_SRC c
+  #include <stdio.h>
+
+int main(void)
+{
+    FILE *fp;                      // Variable to represent open file
+
+    fp = fopen("hello.txt", "r");  // Open file for reading
+
+    int c = fgetc(fp);             // Read a single character
+    printf("%c\n", c);             // Print char to stdout
+
+    fclose(fp);                    // Close the file when done
+}
+#+END_SRC 
+The FILE* keeps track of our position in the file. So subsequent calls to fgetc() would get the next character in the file, and then the next, until the end.
+** End Of File : EOF
+How about I share that Fun Fact™, now. Turns out EOF is the reason why fgetc() and functions like it return an int instead of a char. EOF isn’t a character proper, and its value likely falls outside the range of char. Since fgetc() needs to be able to return any byte and EOF, it needs to be a wider type that can hold more values. so int it is. But unless you’re comparing the returned value against EOF, you can know, deep down, it’s a char.
+#+BEGIN_SRC c
+  #include <stdio.h>
+
+int main(void)
+{
+    FILE *fp;
+    int c;
+
+    fp = fopen("hello.txt", "r");
+
+    while ((c = fgetc(fp)) != EOF)
+        printf("%c", c);
+
+    fclose(fp);
+}
+#+END_SRC
+*** Reading a Line at a Time
+ So how can we get an entire line at once? fgets() to the rescue! For arguments, it takes a pointer to a char buffer to hold bytes, a maximum number of bytes to read, and a FILE* to read from. It returns NULL on end-of-file or error. fgets() is even nice enough to NUL-terminate the string when its done.
+ #+BEGIN_SRC c
+#include <stdio.h>
+
+int main(void)
+{
+    FILE *fp;
+    char s[1024];  // Big enough for any line this program will encounter
+    int linecount = 0;
+
+    fp = fopen("quote.txt", "r");
+
+    while (fgets(s, sizeof s, fp) != NULL) 
+        printf("%d: %s", ++linecount, s);
+
+    fclose(fp);
+}
+ #+END_SRC
+** Formatted Input
+#+BEGIN_SRC c
+#include <stdio.h>
+
+int main(void)
+{
+    FILE *fp;
+    char name[1024];  // Big enough for any line this program will encounter
+    float length;
+    int mass;
+
+    fp = fopen("whales.txt", "r");
+
+    while (fscanf(fp, "%s %f %d", name, &length, &mass) != EOF)
+        printf("%s whale, %d tonnes, %.1f meters\n", name, mass, length);
+
+    fclose(fp);
+}
+#+END_SRC
+** Writing to text files
+ In much the same way we can use fgetc(), fgets(), and fscanf() to read text streams, we can use fputc(), fputs(), and fprintf() to write text streams.
+ when we open the file we need to open it with the "w" (write) as the second argument
+ fun fact : Since stdout is a file you could put FILE *fp = stdout; and the program will display it in the console instaed of to a file
+** Binary File I/O
+Binary file i/o is like the normal text files , but in the fopen function we use rb instead of r and so on
+we also dont use fgets() or fputs() we use fwrite() and fread()
+#+BEGIN_SRC c
+#include <stdio.h>
+
+int main(void)
+{
+    FILE *fp;
+    unsigned char bytes[6] = {5, 37, 0, 88, 255, 12};
+
+    fp = fopen("output.bin", "wb");  // wb mode for "write binary"!
+
+    // In the call to fwrite, the arguments are:
+    //
+    // * Pointer to data to write
+    // * Size of each "piece" of data
+    // * Count of each "piece" of data
+    // * FILE*
+
+    fwrite(bytes, sizeof(char), 6, fp);
+
+    fclose(fp);
+}
+#+END_SRC
+
+#+BEGIN_SRC c
+#include <stdio.h>
+
+int main(void)
+{
+    FILE *fp;
+    unsigned char c;
+
+    fp = fopen("output.bin", "rb"); // rb for "read binary"!
+
+    while (fread(&c, sizeof(char), 1, fp) > 0)
+        printf("%d\n", c);
+
+    fclose(fp);
+}
+#+END_SRC
+* typedef : Making New Types
+** typedef In Theory
+Basically you take an existing type and you make an alias for it:
+typedef int nigro; // make nigro an alias for int
+** Typedef In Structs
+#+BEGIN_SRC c
+struct animal {
+    char *name;
+    int leg_count, speed;
+};
+
+//  original name      new name
+//            |         |
+//            v         v
+//      |-----------| |----|
+typedef struct animal animal;
+
+struct animal y;  // This works
+animal z;         // This also works because "animal" is an alias
+#+END_SRC
+
+But programmers communly do it in this way , and i like it better honestly
+#+BEGIN_SRC c
+//  original name
+//            |
+//            v
+//      |-----------|
+typedef struct animal {  // we can remove animal and use it with just struct
+    char *name;
+    int leg_count, speed;
+} animal;                         // <-- new name
+
+struct animal y;  // This works
+animal z;         // This also works because "animal" is an alias
+#+END_SRC 
+** typedef And Other Types
+It’s not that using typedef with a simple type like int is completely useless… it helps you abstract the types to make it easier to change them later.
+
+For example, if you have float all over your code in 100 zillion places, it’s going to be painful to change them all to double if you find you have to do that later for some reason.
+** typedef And Pointers
+#+BEGIN_SRC c
+typedef int *intptr;
+
+int a = 10;
+intptr x = &a;  // "intptr" is type "int*"
+#+END_SRC
+** Arrays And typedef
+#+BEGIN_SRC c
+// Make type five_ints an array of 5 ints
+typedef int five_ints[5];
+
+five_ints x = {11, 22, 33, 44, 55};
+#+END_SRC
+* Pointer II : Arithmetic
+** Pointers Arithmetic
+Its important to remember the as we mve pointers around and look at different places in memory we need to make sure that were always pointing to a valid place in memory , if we are off in the weed there is going to be an undefined behavior
+*** Adding To Pointers
+#+BEGIN_SRC c
+int a[5] = {11, 22, 33, 44, 55};
+int *p = &a[0];  // Or "int *p = a;" works just as well
+printf("%d\n", *p);  // Prints 11
+printf("%d\n", *(p + 1));  // Prints 22!!
+#+END_SRC
+*** Changing Pointers
+#+BEGIN_SRC c
+int a[] = {11, 22, 33, 44, 55, 999};  // Add 999 here as a sentinel
+int *p = &a[0];  // p points to the 11
+while (*p != 999) {       // While the thing p points to isn't 999
+    printf("%d\n", *p);   // Print it
+    p++;                  // Move p to point to the next int!
+}
+#+END_SRC 
+*** Subtracting Pointers
+#+BEGIN_SRC c
+#include <stdio.h>
+int my_strlen(char *s)
+{
+    // Start scanning from the beginning of the string
+    char *p = s;
+    // Scan until we find the NUL character
+    while (*p != '\0')
+        p++;
+    // Return the difference in pointers
+    return p - s;
+}
+int main(void)
+{
+    printf("%d\n", my_strlen("Hello, world!"));  // Prints "13"
+}
+#+END_SRC
+** Array/Pointer Equivalance
+#+BEGIN_SRC c
+
+  #include <stdio.h>
+
+  int main(void)
+  {
+      int a[] = {11, 22, 33, 44, 55};
+
+      int *p = a;  // p points to the first element of a, 11
+
+      // Print all elements of the array a variety of ways:
+
+      for (int i = 0; i < 5; i++)
+          printf("%d\n", a[i]);      // Array notation with a
+
+      for (int i = 0; i < 5; i++)
+          printf("%d\n", p[i]);      // Array notation with p
+
+      for (int i = 0; i < 5; i++)
+          printf("%d\n", *(a + i));  // Pointer notation with a
+
+      for (int i = 0; i < 5; i++)
+          printf("%d\n", *(p + i));  // Pointer notation with p
+
+      for (int i = 0; i < 5; i++)
+          printf("%d\n", *(p++));    // Moving pointer p
+          //printf("%d\n", *(a++));    // Moving array variable a--ERROR!
+  }
+#+END_SRC
+** Void Pointers
+A void* is a pointer to an existing things that we dont know the type of it and there is two cases for this:
+1. A function is going to operate on something byte-by-byte. For example, memcpy() copies bytes of memory from one pointer to
+ another, but those pointers can point to any type.
+2. Another function is calling a function you passed to it (a callback), and it’s passing you data. You know the type of the data, but the
+ function calling you doesn’t. So it passes you void*s—’cause it doesn’t know the type—and you convert those to the type you need.
+ The built-in qsort()86 and bsearch()87 use this technique.
+
+#+BEGIN_SRC c
+#include <stdio.h>
+#include <string.h>
+int main(void)
+{
+    char s[] = "Goats!";
+    char t[100];
+    memcpy(t, s, 7);  // Copy 7 bytes--including the NUL terminator!
+    printf("%s\n", t);  // "Goats!"
+}
+
+Or we can copy some ints:
+
+#include <stdio.h>
+#include <string.h>
+int main(void)
+{
+    int a[] = {11, 22, 33};
+    int b[3];
+    memcpy(b, a, 3 * sizeof(int));  // Copy 3 ints of data
+    printf("%d\n", b[1]);  // 22
+}
+#+END_SRC
+* Manual Memory Allocation
+This is one of the big areas where C likely diverges from languages you already know: manual memory management.
+Other languages uses reference counting, garbage collection, or other means to determine when to allocate new memory for some
+data—and when to deallocate it when no variables refer to it.
+And that’s nice. It’s nice to be able to not worry about it, to just drop all the references to an item and trust that at some point the
+memory associated with it will be freed.
+But C’s not like that, entirely.
+Of course, in C, some variables are automatically allocated and deallocated when they come into scope and leave scope. We call
+these automatic variables. They’re your average run-of-the-mill block scope “local” variables. No problem. 
+But that if you want something to persist longer than a particular block? This is where manual memory management comes into
+play.
+You can tell C explicitly to allocate for you a certain number of bytes that you can use as you please. And these bytes will remain
+allocated until you explicitly free that memory90.
+It’s important to free the memory you’re done with! If you don’t, we call that a memory leak and your process will continue to
+reserve that memory until it exits.
+If you manually allocated it, you have to manually free it when you’re done with it.
+So how do we do this? We’re going to learn a couple new functions, and make use of the sizeof operator to help us learn how many
+bytes to allocate.
+In common C parlance, devs say that automatic local variables are allocated “on the stack”, and manually-allocated memory is “on
+the heap”. The spec doesn’t talk about either of those things, but all C devs will know what you’re talking about if you bring them up.
+All functions we’re going to learn in this chapter can be found in <stdlib.h>.
+** Allocating And Deallocating , malloc() and free()
+#+BEGIN_SRC c
+#include<stdlib.h>
+
+int main(void){
+  int *p = malloc(sizeof *p);
+  *p = 2;
+  printf("%d\n",*p);
+  free(p);
+}
+#+END_SRC
+** Error Checking
+malloc() Returns NULL if the allocated memory cannot be allocated for some reason so we have to do error checking , its also commun to put it in this way
+#+BEGIN_SRC c
+int *x;
+
+if ((x = malloc(sizeof(int) * 10)) == NULL) {
+    printf("Error allocating 10 ints\n");
+    // do something here to handle it
+}
+#+END_SRC
+** Allocating Space For an Array
+#+BEGIN_SRC c
+#include <stdio.h>
+#include <stdlib.h>
+
+int main(void)
+{
+    // Allocate space for 10 ints
+    int *p = malloc(sizeof(int) * 10);
+
+    // Assign them values 0-45:
+    for (int i = 0; i < 10; i++)
+        p[i] = i * 5;
+
+    // Print all values 0, 5, 10, 15, ..., 40, 45
+    for (int i = 0; i < 10; i++)
+        printf("%d\n", p[i]);
+
+    // Free the space
+    free(p);
+}
+#+END_SRC
+** An Alternative calloc()
+calloc() is a function similar to malloc() tho there is two differences:
+1) Instead of a single argument you pass the number of elements and the size of elements
+2) Clears the memory to 0x
+3) Usage: calloc(10,sizeof(int));
+tho you have to free it after you are done with it with free()
+** Changin Allocated size with realloc()
+To allocate allocate some new space and then memcpy() the memory over , but turns out that there is a function do all of this called realloc() :)
+it takes a pointer to the previously allocated memory and the new size of memory in !bytes!
+*** Reading lines in arbitrary length
+*** Realloc With Null
+These Two Are the Same:
+#+BEGIN_SRC c
+char *p = malloc(3490);
+char *p = realloc(NULL, 3490);
+#+END_SRC
+** Alligned Allocations
+We will see about that when needed but i understood nothing
+* Scope
+Its all about what variables are visible in what contexts.
+** Block Scopes
